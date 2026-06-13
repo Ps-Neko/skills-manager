@@ -106,15 +106,15 @@ const uniq = items.filter(it => { const k = it.source + '|' + it.name; if (seen.
 
 // 시드 키워드 표 (1단 — 넓게. 정밀 분리는 --judge 2단)
 const GROUPS = [
-  { label: '테스트 먼저 짜기 (TDD)', re: /(^|[-_])tdd($|[-_])|test-driven|red-green/i },
-  { label: '코드 리뷰', re: /code-review|requesting-code|receiving-code|review-and-quality|^review$/i },
-  { label: '계획 세우기', re: /writing-plans|planning-and-task|task-breakdown|^plan$|^planning$/i },
-  { label: '디버깅', re: /debug|diagnose|investigate|error-recovery/i },
-  { label: '아이디어/브레인스토밍', re: /brainstorm|idea-refine|ideate|office-hours|interview-me|grill/i },
-  { label: '스펙 작성', re: /(^|[-_])spec($|[-_])|spec-driven/i },
-  { label: '배포/출시', re: /(^|[-_])ship($|[-_])|deploy|launch|shipping/i },
-  { label: '보안 점검', re: /security|hardening|(^|[-_])cso($|[-_])/i },
-  { label: '코드 단순화', re: /simplif/i },
+  { cap: 'tdd', label: '테스트 먼저 짜기 (TDD)', re: /(^|[-_])tdd($|[-_])|test-driven|red-green/i },
+  { cap: 'review', label: '코드 리뷰', re: /code-review|requesting-code|receiving-code|review-and-quality|^review$/i },
+  { cap: 'plan', label: '계획 세우기', re: /writing-plans|planning-and-task|task-breakdown|^plan$|^planning$/i },
+  { cap: 'debug', label: '디버깅', re: /debug|diagnose|investigate|error-recovery/i },
+  { cap: 'brainstorm', label: '아이디어/브레인스토밍', re: /brainstorm|idea-refine|ideate|office-hours|interview-me|grill/i },
+  { cap: 'spec', label: '스펙 작성', re: /(^|[-_])spec($|[-_])|spec-driven/i },
+  { cap: 'ship', label: '배포/출시', re: /(^|[-_])ship($|[-_])|deploy|launch|shipping/i },
+  { cap: 'security', label: '보안 점검', re: /security|hardening|(^|[-_])cso($|[-_])/i },
+  { cap: 'simplify', label: '코드 단순화', re: /simplif/i },
 ];
 
 // 설정·도우미·내부 항목은 "기능 중복"이 아니다 → 후보에서 제외 (2단 루브릭 #4의 기계화)
@@ -129,6 +129,35 @@ for (const g of GROUPS) {
 const cov = {};
 for (const c of conflicts) for (const s of c.sources) cov[s] = (cov[s] || 0) + 1;
 const covSorted = Object.entries(cov).sort((a, b) => b[1] - a[1]);
+
+// ── --json: 구조화된 스킬 인벤토리 (추천기·워크플로우의 기반) ──
+if (process.argv.includes('--json')) {
+  const penabled = Object.fromEntries(plugins.map(p => [p.short, p.enabled !== false]));
+  const capsOf = (name) => GROUPS.filter(g => g.re.test(name) && !NOT_DUP.test(name)).map(g => g.cap);
+  const bySrc = {}; for (const it of uniq) bySrc[it.source] = (bySrc[it.source] || 0) + 1;
+  const out = {
+    version: '0.2.0',
+    environment: { hasClaude: fs.existsSync(SKILLS), skillsPath: SKILLS, mirrorsFolded: mirrorFiles },
+    counts: { total: uniq.length, ...bySrc, plugins: plugins.length, agents: agentCount },
+    plugins: plugins.map(p => ({ name: p.short, enabled: p.enabled !== false, skillCount: p.count })),
+    skills: uniq.map(it => ({
+      id: it.source + ':' + it.name,
+      name: it.name,
+      source: it.source,
+      description: it.desc || '',
+      enabled: it.source in penabled ? penabled[it.source] : true,
+      capabilities: capsOf(it.name),
+    })),
+    groups: GROUPS.map(g => {
+      const hits = uniq.filter(it => g.re.test(it.name) && !NOT_DUP.test(it.name));
+      if (!hits.length) return null;
+      const sources = [...new Set(hits.map(h => h.source))];
+      return { capability: g.cap, label: g.label, skills: hits.map(h => h.source + ':' + h.name), sources, duplicateLevel: sources.length >= 2 ? 'high' : 'none' };
+    }).filter(Boolean),
+  };
+  console.log(JSON.stringify(out, null, 2));
+  process.exit(0);
+}
 
 // ---- 출력 ----
 const SRC_KO = { gstack: 'gstack', '.agents': '.agents(심링크)', user: '직접 설치', 'agent-skills': 'agent-skills', superpowers: 'superpowers', codex: 'codex', harness: 'harness', '외부': '외부 링크' };
