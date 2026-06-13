@@ -1,0 +1,52 @@
+{
+  "version": "0.3.0",
+  "_comment": "스킬쓸이 워크플로우 템플릿. capability는 scan.mjs의 GROUPS cap과 일치(tdd·review·plan·debug·brainstorm·spec·ship·security·simplify). cap에 없는 단계(implement·clarify 등)는 추천 시 '기본 Claude로'로 표기. 사용자가 항목을 추가/수정 가능.",
+  "workflows": [
+    {
+      "name": "app-dev",
+      "label": "새 기능 개발",
+      "steps": [
+        { "capability": "brainstorm", "note": "요구·아이디어 정리" },
+        { "capability": "spec", "note": "스펙 작성" },
+        { "capability": "plan", "note": "구현 계획" },
+        { "capability": "implement", "note": "구현 (대개 기본 Claude)" },
+        { "capability": "tdd", "note": "테스트" },
+        { "capability": "review", "note": "코드 리뷰" }
+      ]
+    },
+    {
+      "name": "bugfix",
+      "label": "버그 수정",
+      "steps": [
+        { "capability": "debug", "note": "원인 조사" },
+        { "capability": "tdd", "note": "회귀 테스트" },
+        { "capability": "review", "note": "리뷰" }
+      ]
+    },
+    {
+      "name": "release-check",
+      "label": "배포 전 점검",
+      "steps": [
+        { "capability": "tdd", "note": "테스트" },
+        { "capability": "security", "note": "보안 점검" },
+        { "capability": "ship", "note": "배포 점검" }
+      ]
+    },
+    {
+      "name": "code-review",
+      "label": "코드 리뷰",
+      "steps": [
+        { "capability": "review", "note": "변경 리뷰" }
+      ]
+    },
+    {
+      "name": "refactor",
+      "label": "리팩터링",
+      "steps": [
+        { "capability": "simplify", "note": "단순화" },
+        { "capability": "tdd", "note": "테스트로 안전망" },
+        { "capability": "review", "note": "리뷰" }
+      ]
+    }
+  ]
+}

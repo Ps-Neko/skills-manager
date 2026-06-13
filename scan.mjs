@@ -8,12 +8,28 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 const HOME = os.homedir();
 const CLAUDE = path.join(HOME, '.claude');
 const SKILLS = path.join(CLAUDE, 'skills');
 const AGENTS = path.join(CLAUDE, 'agents');
 const PLUGINS = path.join(CLAUDE, 'plugins');
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+// --workflows: 번들된 워크플로우 템플릿 목록 (스캔 없이 바로)
+if (process.argv.includes('--workflows')) {
+  try {
+    const wf = JSON.parse(fs.readFileSync(path.join(SCRIPT_DIR, 'workflows.json'), 'utf8'));
+    if (process.argv.includes('--json')) console.log(JSON.stringify(wf, null, 2));
+    else {
+      console.log('\n🧭 워크플로우 템플릿:');
+      for (const w of wf.workflows) console.log(`  · ${w.name.padEnd(14)} ${w.label}   [${w.steps.map(s => s.capability).join(' → ')}]`);
+      console.log('\n사용: /skillsweep workflow <name>  (단계마다 깔린 스킬을 중복 해소해 골라줌)\n');
+    }
+  } catch (e) { console.log('workflows.json 못 읽음:', e.message); }
+  process.exit(0);
+}
 
 // gstack 가 9개 surface 폴더에 사본을 미러 → 접어서 안 센다
 const SURFACE = new Set(['.cursor', '.factory', '.kiro', '.hermes', '.gbrain', '.slate', '.opencode', '.openclaw', '.agents']);

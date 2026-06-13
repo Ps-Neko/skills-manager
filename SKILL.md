@@ -70,6 +70,26 @@ skillsweep recommend의 가치는 **호스트가 구조상 못 하는 것**:
 ### 경계 (추천 모드도)
 읽기 전용 — **추천만**. 스킬을 끄거나 실행하거나 설정을 바꾸지 않는다. "정리"가 필요하면 검사 모드 + slice2(게이트 후).
 
+---
+
+## 워크플로우 모드 (workflow) — v0.3
+
+트리거: `/skillsweep workflow <name>` 또는 `/skillsweep workflow list`.
+
+추천 모드의 **이름 붙은 재사용 버전**이다. 자유 작업문 대신 미리 정의된 흐름(app-dev·bugfix·release-check·code-review·refactor)을 골라, 그 단계 시퀀스를 네 인벤토리로 해소한다.
+
+### 절차
+1. `node scan.mjs --workflows` → 템플릿 목록(이름·라벨·capability 시퀀스). `list`면 여기서 끝.
+2. 고른 `<name>` 템플릿을 읽는다 (이 스킬 폴더의 `workflows.json`). 없는 이름이면 목록 보여주고 되묻기.
+3. 템플릿의 각 step(capability)을 **추천 모드 절차와 똑같이** 해소: `scan.mjs --json` 인벤토리에서 그 capability 가진 스킬 찾기 → 1개면 그것 / 여러 개(중복)면 하나만+나머지 불필요 / 0개면 "기본 Claude로".
+4. 평한국어로 이름 붙은 흐름 출력.
+
+### 커스텀
+사용자가 `workflows.json`에 항목을 추가/수정하면 새 흐름이 생긴다. capability는 scan의 cap(tdd·review·plan·debug·brainstorm·spec·ship·security·simplify)이면 자동 해소, 그 외(implement 등)는 "기본 Claude로" 표기.
+
+### 경계
+읽기 전용 — 흐름·추천만. 실행·끄기 없음.
+
 ## 경계
 - slice1 = 읽기 전용. settings.json·스킬 폴더를 **건드리지 않는다**.
 - slice2(정리)·slice3(조립라인)은 게이트0(외부 반응 확인) 통과 후. PLAN.md 참고.
