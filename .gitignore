@@ -1,0 +1,12 @@
+# 개인 전략 문서 — GitHub에 올리지 않음 (n=1·로드맵·내부 맥락)
+PLAN.md
+GATE0.md
+
+# skillsweep 아카이브(정리 백업, slice2) — 자기오염/노출 방지
+.skillsweep-archive/
+.skill-janitor-archive/
+
+# 잡동사니
+node_modules/
+*.log
+.DS_Store

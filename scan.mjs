@@ -1,0 +1,177 @@
+#!/usr/bin/env node
+// skillsweep (스킬쓸이) — slice1 검사관
+// ~/.claude 의 스킬·에이전트·플러그인을 "읽기 전용"으로 훑어,
+// 같은 일을 하는 스킬이 여러 출처에 겹쳐 깔린 걸 평한국어 지도로 보여준다.
+// ⚠️ 아무것도 끄거나 지우지 않는다. 읽기만.
+//   1단(키워드)으로 후보를 넓게 묶고, 2단 정밀 판정은 `--judge` 패킷을 LLM이 읽어서.
+
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+
+const HOME = os.homedir();
+const CLAUDE = path.join(HOME, '.claude');
+const SKILLS = path.join(CLAUDE, 'skills');
+const AGENTS = path.join(CLAUDE, 'agents');
+const PLUGINS = path.join(CLAUDE, 'plugins');
+
+// gstack 가 9개 surface 폴더에 사본을 미러 → 접어서 안 센다
+const SURFACE = new Set(['.cursor', '.factory', '.kiro', '.hermes', '.gbrain', '.slate', '.opencode', '.openclaw', '.agents']);
+const IGNORE = new Set(['.git', '.github', 'node_modules', '.skill-janitor-archive', 'dist', 'bin']);
+
+let mirrorFiles = 0;
+
+const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } }; // statSync = 심링크 따라감
+
+function readFM(file) {
+  let t; try { t = fs.readFileSync(file, 'utf8'); } catch { return {}; }
+  const m = t.match(/^﻿?---\s*\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) return {};
+  const fm = m[1];
+  const grab = (k) => (fm.match(new RegExp('^' + k + ':\\s*(.+)$', 'm')) || [])[1];
+  const clean = (s) => (s ? s.trim().replace(/^["']|["']$/g, '').trim() : '');
+  return { name: clean(grab('name')), description: clean(grab('description')) };
+}
+
+function countSkillMd(dir) {
+  let n = 0;
+  (function w(d) { let es; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { return; } for (const e of es) { if (e.isDirectory()) w(path.join(d, e.name)); else if (e.name === 'SKILL.md') n++; } })(dir);
+  return n;
+}
+
+// 심링크 대상 위치로 출처 라벨 추정
+function sourceFromLink(target) {
+  const t = target.replace(/\//g, '\\').toLowerCase();
+  if (t.includes('\\.agents\\')) return '.agents';
+  if (t.includes('\\skills\\gstack\\')) return 'gstack';
+  if (t.includes('\\.claude\\')) return 'user';
+  return '외부';
+}
+
+const items = []; // {name, source, desc}
+
+// (1) gstack 깊이1 이름(= 최상위에 평평히 깐 것의 원본). 번들/중첩 사본은 안 센다. 미러는 카운트만.
+const gstackDir = path.join(SKILLS, 'gstack');
+const gstackNames = new Set();
+if (fs.existsSync(gstackDir)) {
+  for (const e of fs.readdirSync(gstackDir, { withFileTypes: true })) {
+    if (!e.name.startsWith('.') && !IGNORE.has(e.name) && isDir(path.join(gstackDir, e.name)) && fs.existsSync(path.join(gstackDir, e.name, 'SKILL.md'))) gstackNames.add(e.name);
+  }
+  for (const s of SURFACE) { const d = path.join(gstackDir, s); if (fs.existsSync(d)) mirrorFiles += countSkillMd(d); }
+}
+
+// (2) 최상위 스킬 (심링크 포함). 출처: gstack 깐 것 / .agents 심링크 / 직접 독립
+for (const e of fs.readdirSync(SKILLS, { withFileTypes: true })) {
+  if (e.name === 'gstack' || SURFACE.has(e.name) || IGNORE.has(e.name)) continue;
+  const full = path.join(SKILLS, e.name);
+  if (!isDir(full)) continue;                 // 심링크-디렉터리도 statSync로 true
+  const sk = path.join(full, 'SKILL.md');
+  if (!fs.existsSync(sk)) continue;
+  const fm = readFM(sk);
+  const nm = fm.name || e.name;
+  let source;
+  if (gstackNames.has(e.name)) source = 'gstack';
+  else if (e.isSymbolicLink()) { try { source = sourceFromLink(fs.readlinkSync(full)); } catch { source = 'user'; } }
+  else source = 'user';
+  items.push({ name: nm, source, desc: fm.description });
+}
+
+// (3) 플러그인 (installed_plugins.json 의 installPath = 진실원)
+const enabled = {};
+for (const f of ['settings.json', 'settings.local.json']) {
+  try { const j = JSON.parse(fs.readFileSync(path.join(CLAUDE, f), 'utf8')); Object.assign(enabled, j.enabledPlugins || {}); } catch {}
+}
+const plugins = [];
+try {
+  const ip = JSON.parse(fs.readFileSync(path.join(PLUGINS, 'installed_plugins.json'), 'utf8'));
+  for (const key of Object.keys(ip.plugins || {})) {
+    const short = key.split('@')[0];
+    const inst = ip.plugins[key]?.[0]?.installPath;
+    const pmap = new Map();
+    if (inst && fs.existsSync(inst)) {
+      (function collect(d) { let es; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { return; } for (const e of es) { if (e.isDirectory()) { if (SURFACE.has(e.name) || IGNORE.has(e.name)) continue; collect(path.join(d, e.name)); } else if (e.name === 'SKILL.md') { const fm = readFM(path.join(d, 'SKILL.md')); const nm = fm.name || path.basename(d); if (!pmap.has(nm)) pmap.set(nm, fm.description || ''); } } })(inst);
+    }
+    plugins.push({ key, short, enabled: enabled[key], count: pmap.size });
+    for (const [nm, d] of pmap) items.push({ name: nm, source: short, desc: d });
+  }
+} catch {}
+
+// (4) agents
+let agentCount = 0;
+try { agentCount = fs.readdirSync(AGENTS).filter(f => f.endsWith('.md')).length; } catch {}
+
+// dedupe
+const seen = new Set();
+const uniq = items.filter(it => { const k = it.source + '|' + it.name; if (seen.has(k)) return false; seen.add(k); return true; });
+
+// 시드 키워드 표 (1단 — 넓게. 정밀 분리는 --judge 2단)
+const GROUPS = [
+  { label: '테스트 먼저 짜기 (TDD)', re: /(^|[-_])tdd($|[-_])|test-driven|red-green/i },
+  { label: '코드 리뷰', re: /code-review|requesting-code|receiving-code|review-and-quality|^review$/i },
+  { label: '계획 세우기', re: /writing-plans|planning-and-task|task-breakdown|^plan$|^planning$/i },
+  { label: '디버깅', re: /debug|diagnose|investigate|error-recovery/i },
+  { label: '아이디어/브레인스토밍', re: /brainstorm|idea-refine|ideate|office-hours|interview-me|grill/i },
+  { label: '스펙 작성', re: /(^|[-_])spec($|[-_])|spec-driven/i },
+  { label: '배포/출시', re: /(^|[-_])ship($|[-_])|deploy|launch|shipping/i },
+  { label: '보안 점검', re: /security|hardening|(^|[-_])cso($|[-_])/i },
+  { label: '코드 단순화', re: /simplif/i },
+];
+
+// 설정·도우미·내부 항목은 "기능 중복"이 아니다 → 후보에서 제외 (2단 루브릭 #4의 기계화)
+const NOT_DUP = /^setup-|^_|-config$|configure/i;
+const conflicts = [];
+for (const g of GROUPS) {
+  const hits = uniq.filter(it => g.re.test(it.name) && !NOT_DUP.test(it.name));
+  const sources = [...new Set(hits.map(h => h.source))];
+  if (hits.length >= 2 && sources.length >= 2) conflicts.push({ label: g.label, hits, sources });
+}
+// 출처별 "충돌영역 커버 수" — 어느 묶음을 메인으로 둘지 정하는 근거(측정 가능한 사실)
+const cov = {};
+for (const c of conflicts) for (const s of c.sources) cov[s] = (cov[s] || 0) + 1;
+const covSorted = Object.entries(cov).sort((a, b) => b[1] - a[1]);
+
+// ---- 출력 ----
+const SRC_KO = { gstack: 'gstack', '.agents': '.agents(심링크)', user: '직접 설치', 'agent-skills': 'agent-skills', superpowers: 'superpowers', codex: 'codex', harness: 'harness', '외부': '외부 링크' };
+const by = {}; for (const it of uniq) by[it.source] = (by[it.source] || 0) + 1;
+const line = '─'.repeat(54);
+console.log('\n🧹  스킬쓸이 (skillsweep) — 검사 결과   (읽기 전용 · 아무것도 끄지 않았어요)');
+console.log(line);
+console.log(`내 Claude 안에 깔린 스킬: 의미 단위로 약 ${uniq.length}개`);
+console.log(`  · gstack 묶음            : ${by.gstack || 0}개  (도구용 사본 ${mirrorFiles}벌은 정상이라 접었어요)`);
+if (by['.agents']) console.log(`  · .agents 묶음(심링크)   : ${by['.agents']}개  (~/.agents/skills 에 있는 걸 끌어다 씀)`);
+console.log(`  · 직접 설치(독립)        : ${by.user || 0}개`);
+console.log(`  · 플러그인               : ${plugins.length}개`);
+for (const p of plugins) console.log(`       - ${p.short.padEnd(14)} ${p.enabled === false ? '꺼짐' : '켜짐'} · 스킬 ${p.count}개`);
+console.log(`  · 에이전트               : ${agentCount}개`);
+console.log(line);
+
+if (conflicts.length === 0) {
+  console.log('\n✅ 같은 일을 하는 스킬이 여러 개 겹친 곳은 없어요. 깔끔합니다.');
+} else {
+  console.log(`\n⚠️  같은 일을 하는 스킬이 여러 출처에 겹쳐 있어요 — ${conflicts.length}군데:\n`);
+  let saved = 0;
+  for (const c of conflicts) {
+    console.log(`  • ${c.label} — ${c.hits.length}곳 (${c.sources.length}개 출처)`);
+    for (const h of c.hits) console.log(`       · ${h.name}  (${SRC_KO[h.source] || h.source})`);
+    console.log(`     → 같은 일이니, 메인으로 정한 묶음 것만 남기고 나머지 출처 걸 끄면 충돌이 없어요.\n`);
+    saved += c.hits.length - 1;
+  }
+  console.log(line);
+  console.log(`✅ 겹치는 것 정리하면(무리마다 1개만 남기면): 약 ${saved}개를 끌 수 있어요.`);
+  console.log(`\n어느 묶음을 메인으로 둘지 정하면 나머지 출처의 중복분을 끄면 됩니다.`);
+  console.log(`충돌영역(${conflicts.length}개) 커버 — 많이 커버할수록 메인 후보:`);
+  for (const [s, n] of covSorted) console.log(`   · ${(SRC_KO[s] || s).padEnd(16)} ${n}/${conflicts.length} 영역`);
+  console.log(`   → '${SRC_KO[covSorted[0][0]] || covSorted[0][0]}' 가 가장 많이 커버해요. 단, 묶음마다 겹치지 않는 고유 스킬도 있으니 메인 선택은 본인 몫.`);
+}
+console.log(`\n(추천만 보여드린 거예요. 실제로 끄는 건 다음 단계에서 동의받고 되돌릴 수 있게 합니다.)\n`);
+
+// ── 2단 판정 패킷 (LLM이 설명 읽고 진짜 중복 가려내기) ──
+if (process.argv.includes('--judge') && conflicts.length) {
+  const cut = (s) => (s || '(설명 없음)').replace(/\s+/g, ' ').slice(0, 90);
+  console.log('────── 판정 패킷 (2단: 설명 읽고 진짜 중복 가려내기) ──────\n');
+  for (const c of conflicts) {
+    console.log(`[${c.label}]`);
+    for (const h of c.hits) console.log(`  - ${h.name} (${SRC_KO[h.source] || h.source}): ${cut(h.desc)}`);
+    console.log('');
+  }
+}
