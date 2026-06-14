@@ -5,6 +5,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+// 내장 5개 템플릿 이름 = 예약(덮어쓰기 금지).
+export const RESERVED = new Set(['app-dev', 'bugfix', 'release-check', 'code-review', 'refactor']);
+
+// 이름: 영숫자·한글·하이픈·밑줄 1~40자, 경로 문자/`..` 금지.
+export function validName(name) {
+  return typeof name === 'string' && /^[\w가-힣-]{1,40}$/u.test(name) && !name.includes('..');
+}
+
 // 사용자 파일은 스킬 폴더 밖 — 재설치(폴더 덮어쓰기)에도 안 날아간다.
 // 테스트는 SKILLSWEEP_HOME 으로 임시 디렉터리를 가리켜 실제 ~/.claude 를 안 건드린다.
 export function defaultUserFile() {
@@ -27,6 +35,8 @@ function writeUser(list, file) {
 }
 
 export function saveWorkflow(name, workflow, file = defaultUserFile()) {
+  if (!validName(name)) return { ok: false, reason: 'invalid-name' };
+  if (RESERVED.has(name)) return { ok: false, reason: 'reserved' };
   const list = loadUser(file);
   const wf = { name, label: (workflow && workflow.label) || name, steps: (workflow && workflow.steps) || [] };
   const idx = list.findIndex((w) => w.name === name);
