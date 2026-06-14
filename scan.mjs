@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps } from './workflow-store.mjs';
+import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps, CAP_LABEL } from './workflow-store.mjs';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
@@ -213,17 +213,17 @@ if (process.argv.includes('--set-skill')) {
   process.exit(0);
 }
 
-// 시드 키워드 표 (1단 — 넓게. 정밀 분리는 --judge 2단)
+// 시드 키워드 표 (1단 — 넓게. 정밀 분리는 --judge 2단). 라벨은 CAP_LABEL 단일 출처에서.
 const GROUPS = [
-  { cap: 'tdd', label: '테스트 먼저 짜기 (TDD)', re: /(^|[-_])tdd($|[-_])|test-driven|red-green/i },
-  { cap: 'review', label: '코드 리뷰', re: /code-review|requesting-code|receiving-code|review-and-quality|^review$/i },
-  { cap: 'plan', label: '계획 세우기', re: /writing-plans|planning-and-task|task-breakdown|^plan$|^planning$/i },
-  { cap: 'debug', label: '디버깅', re: /debug|diagnose|investigate|error-recovery/i },
-  { cap: 'brainstorm', label: '아이디어/브레인스토밍', re: /brainstorm|idea-refine|ideate|office-hours|interview-me|grill/i },
-  { cap: 'spec', label: '스펙 작성', re: /(^|[-_])spec($|[-_])|spec-driven/i },
-  { cap: 'ship', label: '배포/출시', re: /(^|[-_])ship($|[-_])|deploy|launch|shipping/i },
-  { cap: 'security', label: '보안 점검', re: /security|hardening|(^|[-_])cso($|[-_])/i },
-  { cap: 'simplify', label: '코드 단순화', re: /simplif/i },
+  { cap: 'tdd', label: CAP_LABEL.tdd, re: /(^|[-_])tdd($|[-_])|test-driven|red-green/i },
+  { cap: 'review', label: CAP_LABEL.review, re: /code-review|requesting-code|receiving-code|review-and-quality|^review$/i },
+  { cap: 'plan', label: CAP_LABEL.plan, re: /writing-plans|planning-and-task|task-breakdown|^plan$|^planning$/i },
+  { cap: 'debug', label: CAP_LABEL.debug, re: /debug|diagnose|investigate|error-recovery/i },
+  { cap: 'brainstorm', label: CAP_LABEL.brainstorm, re: /brainstorm|idea-refine|ideate|office-hours|interview-me|grill/i },
+  { cap: 'spec', label: CAP_LABEL.spec, re: /(^|[-_])spec($|[-_])|spec-driven/i },
+  { cap: 'ship', label: CAP_LABEL.ship, re: /(^|[-_])ship($|[-_])|deploy|launch|shipping/i },
+  { cap: 'security', label: CAP_LABEL.security, re: /security|hardening|(^|[-_])cso($|[-_])/i },
+  { cap: 'simplify', label: CAP_LABEL.simplify, re: /simplif/i },
 ];
 
 // 설정·도우미·내부 항목은 "기능 중복"이 아니다 → 후보에서 제외 (2단 루브릭 #4의 기계화)

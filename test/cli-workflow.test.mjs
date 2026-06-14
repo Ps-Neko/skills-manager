@@ -187,3 +187,20 @@ test('--workflows(글자) 는 단계별 쓸 스킬 표를 찍는다', () => {
   assert.match(out, /기본 Claude로/);        // implement 단계
   assert.match(out, /app-dev/);
 });
+
+test('--workflows(글자): 스킬 폴더 없는 환경도 안 죽고, 단계 라벨이 한국어다(영어 cap 노출 금지)', () => {
+  // USERPROFILE/HOME 를 빈 임시폴더로 → os.homedir() 가 그쪽을 보게 해 no-skills 경로 강제.
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-nohome-'));
+  const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-sm-'));
+  const out = execFileSync(process.execPath, [SCAN, '--workflows'], {
+    input: '', encoding: 'utf8',
+    env: { ...process.env, HOME: fakeHome, USERPROFILE: fakeHome, SKILLS_MANAGER_HOME: smHome },
+  });
+  assert.match(out, /기본 Claude로/, 'no-skills 면 모든 단계가 none → 기본 Claude로');
+  // 한국어 라벨이 인벤토리 없이도 떨어져야(정적 라벨표). 이게 없으면 영어 cap 으로 추락한 것.
+  assert.match(out, /테스트 먼저 짜기/, 'tdd 라벨 한국어');
+  assert.match(out, /스펙 작성/, 'spec 라벨 한국어');
+  assert.match(out, /코드 리뷰/, 'review 라벨 한국어');
+  // 단계 행(번호 + 라벨)에 영어 cap 토큰이 라벨로 새지 않아야(헤더 슬러그는 제외).
+  assert.doesNotMatch(out, /\n\s*\d+\s+(brainstorm|spec|plan|tdd|review|debug|security|ship|simplify)\s/, '단계 라벨에 영어 cap 노출 금지');
+});

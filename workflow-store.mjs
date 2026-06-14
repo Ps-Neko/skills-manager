@@ -106,8 +106,18 @@ export function setStepSkill(name, stepIndex, skillId, file = defaultUserFile())
   return { ok: true, capability: step.capability, skill: step.skill };
 }
 
-// 비-그룹 capability(implement·clarify 등)의 표 라벨. 그룹 cap 은 groups 의 label 을 쓴다.
+// capability → 한국어 표 라벨의 단일 출처. scan.mjs 의 GROUPS 도 이 표를 참조한다(라벨 중복 제거).
+// 인벤토리(groups)가 비어도 — 신규/빈 설치 — 단계 라벨이 영어 cap 으로 추락하지 않게 정적 보장.
 export const CAP_LABEL = {
+  tdd: '테스트 먼저 짜기 (TDD)',
+  review: '코드 리뷰',
+  plan: '계획 세우기',
+  debug: '디버깅',
+  brainstorm: '아이디어/브레인스토밍',
+  spec: '스펙 작성',
+  ship: '배포/출시',
+  security: '보안 점검',
+  simplify: '코드 단순화',
   implement: '구현',
   clarify: '요구 확인',
 };
