@@ -26,6 +26,13 @@ test('loadUser returns [] for a missing file', () => {
   assert.deepStrictEqual(loadUser(path.join(os.tmpdir(), 'sw-nope', 'none.json')), []);
 });
 
+test('loadUser returns [] for valid JSON without a workflows key', () => {
+  const file = tmpFile();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, '{}');
+  assert.deepStrictEqual(loadUser(file), []);
+});
+
 test('reserved built-in names cannot be saved', () => {
   const file = tmpFile();
   const res = saveWorkflow('app-dev', { steps: [] }, file);
@@ -44,6 +51,13 @@ test('invalid names are rejected', () => {
 test('validName accepts 한글·hyphen·underscore', () => {
   assert.strictEqual(validName('내-흐름_1'), true);
   assert.strictEqual(validName('a/b'), false);
+});
+
+test('validName rejects leading/trailing hyphens but keeps internal ones', () => {
+  assert.strictEqual(validName('-start'), false);
+  assert.strictEqual(validName('end-'), false);
+  assert.strictEqual(validName('mid-dash'), true);
+  assert.strictEqual(validName('a'), true);
 });
 
 test('saving an existing name overwrites and flags it', () => {
@@ -90,6 +104,12 @@ test('annotateMissing flags installed vs missing vs null', () => {
   assert.strictEqual(out.steps[0].installed, true);
   assert.strictEqual(out.steps[1].installed, false);
   assert.strictEqual(out.steps[2].installed, null);
+});
+
+test('annotateMissing returns steps:[] for a workflow without a steps key', () => {
+  const out = annotateMissing({ name: 'x' }, []);
+  assert.deepStrictEqual(out.steps, []);
+  assert.strictEqual(out.name, 'x');
 });
 
 test('listAll merges builtin + user with source labels', () => {
