@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow, annotateMissing, listAll } from '../workflow-store.mjs';
+import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow, annotateMissing, listAll, validStep } from '../workflow-store.mjs';
 
 function tmpFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-'));
@@ -116,4 +116,19 @@ test('listAll merges builtin + user with source labels', () => {
   const merged = listAll([{ name: 'app-dev', steps: [] }], [{ name: 'mine', steps: [] }]);
   assert.strictEqual(merged.find((w) => w.name === 'app-dev').source, 'builtin');
   assert.strictEqual(merged.find((w) => w.name === 'mine').source, 'user');
+});
+
+test('saveWorkflow rejects malformed steps (invalid-steps)', () => {
+  const file = tmpFile();
+  assert.strictEqual(saveWorkflow('bad1', { steps: [{ skill: 'a:b' }] }, file).reason, 'invalid-steps'); // capability 없음
+  assert.strictEqual(saveWorkflow('bad2', { steps: 'nope' }, file).reason, 'invalid-steps'); // steps 가 배열 아님
+  assert.strictEqual(saveWorkflow('bad3', { steps: [{ capability: 'tdd', skill: 5 }] }, file).reason, 'invalid-steps'); // skill 타입 오류
+  assert.deepStrictEqual(loadUser(file), []); // 아무것도 안 써짐
+});
+
+test('validStep accepts well-formed steps incl. null skill/note', () => {
+  assert.strictEqual(validStep({ capability: 'tdd', skill: 'a:b', note: '' }), true);
+  assert.strictEqual(validStep({ capability: 'implement', skill: null }), true);
+  assert.strictEqual(validStep({ skill: 'a:b' }), false); // capability 없음
+  assert.strictEqual(validStep(null), false);
 });

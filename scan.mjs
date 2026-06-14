@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// skillsweep (스킬쓸이) — slice1 검사관
+// skillsweep (스킬쓸이) — 스킬 중복 지도 + 워크플로우
 // ~/.claude 의 스킬·에이전트·플러그인을 "읽기 전용"으로 훑어,
 // 같은 일을 하는 스킬이 여러 출처에 겹쳐 깔린 걸 평한국어 지도로 보여준다.
-// ⚠️ 아무것도 끄거나 지우지 않는다. 읽기만.
+// ⚠️ 검사·추천은 읽기 전용(안 끄고 안 바꿈). 쓰기는 워크플로우 저장 파일 한 곳만.
 //   1단(키워드)으로 후보를 넓게 묶고, 2단 정밀 판정은 `--judge` 패킷을 LLM이 읽어서.
 
 import fs from 'node:fs';
@@ -54,7 +54,7 @@ if (process.argv.includes('--save')) {
   catch { console.log('저장 실패: 워크플로우 JSON 을 못 읽었어요(유효하지 않은 JSON).'); process.exit(1); }
   const res = saveWorkflow(name, wf);
   if (!res.ok) {
-    const why = { 'invalid-name': '이름이 올바르지 않아요(영숫자·한글·-·_ 1~40자).', 'reserved': '내장 템플릿 이름이라 다른 이름을 쓰세요.' }[res.reason] || res.reason;
+    const why = { 'invalid-name': '이름이 올바르지 않아요(영숫자·한글·-·_ 1~40자).', 'reserved': '내장 템플릿 이름이라 다른 이름을 쓰세요.', 'invalid-steps': '워크플로우 단계 형식이 올바르지 않아요(각 단계에 capability가 있어야 해요).' }[res.reason] || res.reason;
     console.log(`저장 실패: ${why}`);
     process.exit(1);
   }
@@ -73,6 +73,21 @@ if (process.argv.includes('--delete')) {
     process.exit(1);
   }
   console.log(`삭제했어요: ${name}`);
+  process.exit(0);
+}
+
+// ~/.claude/skills 가 없으면 스캔할 게 없음 — 친절히 안내하고 끝(크래시 방지).
+if (!fs.existsSync(SKILLS)) {
+  if (process.argv.includes('--json')) {
+    console.log(JSON.stringify({
+      version: '0.2.0',
+      environment: { hasClaude: false, skillsPath: SKILLS, mirrorsFolded: 0 },
+      counts: { total: 0, plugins: 0, agents: 0 },
+      plugins: [], skills: [], groups: [],
+    }, null, 2));
+  } else {
+    console.log(`\n🧹  스킬쓸이 — ~/.claude/skills 폴더를 찾지 못했어요.\n   Claude Code 스킬이 아직 설치되지 않았거나 경로가 다릅니다.\n   (찾은 경로: ${SKILLS})\n`);
+  }
   process.exit(0);
 }
 
