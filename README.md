@@ -1,44 +1,55 @@
-# skillsweep (스킬쓸이)
+# Skills Manager
 
-> Claude Code / Cursor에 깔린 스킬들이 **같은 일을 여러 개 중복**으로 하고 있는지 한 장의 평한국어 지도로 보여주는 **읽기 전용** 명령.
-> *A read-only command that maps which of your installed Claude Code/Cursor skills overlap (same job, multiple sources).*
+Claude Code랑 Cursor에 스킬을 계속 깔다 보니, 어느 순간부터 문제가 생겼습니다.
 
-스킬 묶음을 여러 개(gstack · superpowers · agent-skills · 직접 설치 …) 깔다 보면, 같은 일을 하는 스킬이 출처마다 중복됩니다. skillsweep은 그걸 한눈에 **보여주고**, 작업 흐름마다 하나씩 골라 **저장·재사용**하게 해줍니다. 스킬을 **끄거나 지우지는 않습니다**(끄기는 플러그인 구조 벽으로 영구 미구현 — 아래 참고).
+스킬이 부족한 게 아니라, **비슷한 스킬이 너무 많이 겹쳤습니다.**
 
-## 무엇을 보여주나
-- **총 스킬 수** (도구 호환용 미러 사본은 접어서 1로 셈 — 600개처럼 보이던 게 실은 ~100개)
-- **출처별 분포** (어느 묶음에서 왔나) + 플러그인 켜짐/꺼짐
-- **같은 일이 겹친 곳** (TDD·코드리뷰·디버깅·브레인스토밍·계획·스펙·배포·보안 …)
-- **출처별 커버 점수** — "메인 하나 정하기"의 근거
+코드 리뷰도 여러 개. 디버깅도 여러 개. 계획 세우기도 여러 개.
+
+스킬은 많아졌는데, 오히려 어떤 걸 써야 할지 고르는 시간이 늘었습니다.
+
+그래서 만든 게 **Skills Manager** 입니다. 설치된 스킬을 스캔해서 **무엇이 겹치는지, 어디서 왔는지, 어떤 흐름으로 쓰면 좋은지**를 한 장의 평한국어 지도로 보여주는 **읽기 전용** 도구입니다.
+
+> *A read-only command that maps which of your installed Claude Code / Cursor skills overlap (same job, multiple sources), and lets you save reusable step workflows.*
+
+## 주요 기능
+- 설치된 스킬 전체 스캔 (도구 호환용 미러 사본은 접어서 셈 — 600개처럼 보이던 게 실은 ~100개)
+- 같은 역할로 겹치는 스킬 확인
+- gstack · superpowers · agent-skills 등 **출처별 분포** 확인 + 플러그인 켜짐/꺼짐
+- TDD · 코드 리뷰 · 디버깅 · 계획 · 배포 · 보안 같은 **작업별 중복** 확인
+- 작업명을 입력하면 **단계별 추천 흐름** 생성 (`recommend`)
+- 자주 쓰는 흐름을 **워크플로우로 저장·재사용** (`workflow save`)
 
 판정은 2단계입니다: 키워드로 후보를 넓게 묶고(1단), 그 위에서 LLM이 설명을 읽어 **진짜 중복인지 / 역할만 다른지**(예: `plan-ceo-review` ≠ `plan-eng-review`)를 가립니다(2단).
 
+스킬을 **끄거나 지우지 않고**, 설정도 건드리지 않습니다. 먼저 보여주고, 정리할 기준을 만들어줍니다.
+
 ## 안전
 - **검사·추천은 읽기 전용.** 스킬을 끄거나 지우거나 설정을 바꾸지 않습니다.
-- **쓰기는 워크플로우 저장 한 곳뿐** — 내가 저장한 흐름만 `~/.claude/skillsweep-workflows.json`에 씁니다. settings·스킬 폴더·다른 스킬은 안 건드립니다.
+- **쓰기는 워크플로우 저장 한 곳뿐** — 내가 저장한 흐름만 `~/.claude/skills-manager-workflows.json`에 씁니다. settings·스킬 폴더·다른 스킬은 안 건드립니다.
 - **스킬 끄기 기능은 없습니다** — 겹친 스킬 대부분이 플러그인 안에 있고, 플러그인은 통째로만 꺼지는 구조적 벽이라(하나 끄려다 고유한 것까지 잃음) 개인 도구로 영구 미구현입니다. 그래서 이 도구는 "보여주는 지도 + 흐름 짜기"까지 합니다.
 
 ## 설치
 이 폴더를 Claude Code 스킬 위치에 둡니다:
 ```
-~/.claude/skills/skillsweep/
+~/.claude/skills/skills-manager/
    ├─ SKILL.md
    └─ scan.mjs
 ```
 또는 clone 후 복사:
 ```
-git clone https://github.com/Ps-Neko/skillsweep.git
+git clone https://github.com/Ps-Neko/skills-manager.git
 ```
 
 ## 사용
-- **검사 (지도)**: `/skillsweep` — 겹친 스킬을 한눈에
-- **추천**: `/skillsweep recommend "배포 전 점검"` — 작업을 단계 흐름으로 펴고, 단계마다 하나씩
-- **워크플로우**: `/skillsweep workflow list` · `workflow save <이름>` · `workflow <이름>`(실행 안내) — 내 흐름을 이름 붙여 저장·재사용
+- **검사 (지도)**: `/skills-manager` — 겹친 스킬을 한눈에
+- **추천**: `/skills-manager recommend "배포 전 점검"` — 작업을 단계 흐름으로 펴고, 단계마다 하나씩
+- **워크플로우**: `/skills-manager workflow list` · `workflow save <이름>` · `workflow <이름>`(실행 안내) — 내 흐름을 이름 붙여 저장·재사용
 - **직접 실행**: `node scan.mjs` (정밀 판정 패킷까지: `node scan.mjs --judge`)
 
 ### 출력 예시 (요약)
 ```
-스킬쓸이 — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)
+Skills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)
 한 줄: 스킬 124개 중 같은 일이 8가지 겹침. 끌 필요 없고, 자주 하는 작업을 '내 흐름'으로 저장해 쓰면 됨.
 깔린 스킬: 약 124개 (사본 486벌 접음)
   gstack 53 · agent-skills 23 · superpowers 14 · .agents 27 · codex 3 · harness 1 · 직접 3
@@ -61,7 +72,8 @@ git clone https://github.com/Ps-Neko/skillsweep.git
 - **워크플로우 저장/실행** — 있음: 내 흐름을 이름 붙여 저장·재사용 (저장 파일에만 씀)
 - **스킬 끄기** — 없음(영구 미구현): 플러그인 통째 토글 벽으로 개인 도구에선 반쪽이라
 
-개인용 도구입니다. 피드백 환영.
+**스킬이 많아졌다면, 이제는 더 깔기 전에 한 번 쓸어볼 때입니다.**
+Skills Manager — 내 스킬 환경을 한눈에 정리하는 읽기 전용 중복 점검 도구. 개인용 도구입니다. 피드백 환영.
 
 ## 라이선스
 MIT
