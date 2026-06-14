@@ -18,6 +18,8 @@ description: Skills Manager — scans the skills installed in Claude Code/Cursor
 - 플러그인 4개를 `enabledPlugins`(settings.json + settings.local.json 병합)로 켜짐/꺼짐 판정하고,
 - **시드 키워드 표(1단)** 로 같은 일 후보를 넓게 묶는다(거짓양성 허용 = 일부러 넓게).
 
+기본 출력(`node scan.mjs`)은 **접힌 요약**이다 — 한 줄 결론 + 큰 겹침 최대 7개 + 다음 한 수만 나온다. 처음 실행 시(저장된 흐름이 없을 때) 환영 안내 한 단락이 앞에 붙고, 이후엔 사라진다. 묶음별 분포·기본 묶음 근거·끄기 설명 전체는 `node scan.mjs --all` 로 본다.
+
 ### 2단계 — 판정 (이 명령이 도는 LLM = 너가 함)
 `node scan.mjs --judge` 를 실행해 **판정 패킷**(후보 무리 + 각 스킬 한 줄 설명)을 받는다.
 패킷의 설명을 읽고, 아래 **판정 루브릭**으로 각 후보를 가린다. 키워드는 이걸 못 한다 — 그래서 네가 한다.
@@ -104,9 +106,10 @@ Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 사용자가 `workflows.json`에 항목을 추가/수정하면 새 흐름이 생긴다. capability는 scan의 cap(tdd·review·plan·debug·brainstorm·spec·ship·security·simplify)이면 자동 해소, 그 외(implement 등)는 "기본 Claude로" 표기.
 
 ### 저장 (save) — `/skills-manager workflow save <이름>`
+0. `recommend` 또는 `workflow <이름>` 결과를 보여준 뒤, **먼저 제안한다**: "이대로 자주 쓰면 '이걸로 저장'이라고 하세요." — 사용자가 명시적으로 요청하면 아래로 진행한다.
 1. 저장할 흐름을 확보: (a) 직전 `recommend`/`workflow <name>` 결과를 쓰거나, (b) 사용자와 단계를 정한다.
 2. 중복(여러 출처) 단계는 사용자에게 **하나를 고르게** 해 고정한다(`"출처:이름"`). 못 고르거나 없으면 `skill: null`.
-3. 완성한 워크플로우 JSON을 `node scan.mjs --save "<이름>"` 의 stdin 으로 넘긴다(형식: `{ "label": "...", "steps": [{ "capability": "...", "skill": "출처:이름"|null, "note": "" }] }`).
+3. 완성한 워크플로우 JSON을 `node scan.mjs --save "<이름>"` 의 stdin 으로 넘긴다(형식: `{ "label": "...", "steps": [{ "capability": "...", "skill": "출처:이름"|null, "note": "" }] }`). Windows 셸 이스케이프 문제로 직접 명령행 붙여넣기는 쓰지 않는다 — 항상 대화 경로(호스트가 stdin 구성)로 진행한다.
 4. 결과 문구(저장/덮어씀/실패 사유)를 평한국어로 그대로 전한다.
 
 ### 수정 (스킬 교체) — `/skills-manager workflow set-skill <이름>`
