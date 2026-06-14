@@ -58,3 +58,23 @@ test('둘째 실행(흐름 저장됨): 환영 배너 사라짐', () => {
   const out = run([], { home, smHome });
   assert.ok(!out.includes('처음 오셨네요'), '저장 후엔 배너 없음');
 });
+
+test('--set-skill 범위초과: 단계 라벨 목록을 회신해 회복을 돕는다', () => {
+  const home = fixtureHome();
+  const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-sm-'));
+  execFileSync(process.execPath, [SCAN, '--save', 'mine'], {
+    input: JSON.stringify({ label: 'm', steps: [{ capability: 'debug', skill: null }, { capability: 'tdd', skill: null }] }),
+    encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home, SKILLS_MANAGER_HOME: smHome },
+  });
+  let err;
+  try {
+    execFileSync(process.execPath, [SCAN, '--set-skill', 'mine', '--step', '9', '--skill', 'a:b'], {
+      input: '', encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home, SKILLS_MANAGER_HOME: smHome },
+    });
+  } catch (e) { err = e; }
+  assert.ok(err && err.status === 1);
+  assert.match(err.stdout, /범위를 벗어났어요/);
+  assert.match(err.stdout, /이 흐름의 단계:/);
+  assert.match(err.stdout, /1 디버깅/);
+  assert.match(err.stdout, /2 테스트 먼저 짜기/);
+});
