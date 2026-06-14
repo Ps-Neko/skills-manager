@@ -9,6 +9,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing } from './workflow-store.mjs';
+
+const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
 const HOME = os.homedir();
 const CLAUDE = path.join(HOME, '.claude');
@@ -17,18 +20,46 @@ const AGENTS = path.join(CLAUDE, 'agents');
 const PLUGINS = path.join(CLAUDE, 'plugins');
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
-// --workflows: 번들된 워크플로우 템플릿 목록 (스캔 없이 바로)
+// --workflows: 내장 템플릿 + 내가 저장한 워크플로우 목록 (스캔 없이 바로)
 if (process.argv.includes('--workflows')) {
-  try {
-    const wf = JSON.parse(fs.readFileSync(path.join(SCRIPT_DIR, 'workflows.json'), 'utf8'));
-    if (process.argv.includes('--json')) console.log(JSON.stringify(wf, null, 2));
-    else {
-      console.log('\n🧭 워크플로우 템플릿:');
-      for (const w of wf.workflows) console.log(`  · ${w.name.padEnd(14)} ${w.label}   [${w.steps.map(s => s.capability).join(' → ')}]`);
-      console.log('\n사용: /skillsweep workflow <name>  (단계마다 깔린 스킬을 중복 해소해 골라줌)\n');
+  let builtin = [];
+  try { builtin = JSON.parse(fs.readFileSync(path.join(SCRIPT_DIR, 'workflows.json'), 'utf8')).workflows || []; }
+  catch (e) { console.log('workflows.json 못 읽음:', e.message); }
+  const all = listAll(builtin, loadUser());
+  if (process.argv.includes('--json')) console.log(JSON.stringify({ workflows: all }, null, 2));
+  else {
+    console.log('\n🧭 워크플로우:');
+    for (const w of all) {
+      const tag = w.source === 'user' ? '내 것 ' : '내장  ';
+      console.log(`  · [${tag}] ${w.name.padEnd(14)} ${w.label}   [${w.steps.map(s => s.capability).join(' → ')}]`);
     }
-  } catch (e) { console.log('workflows.json 못 읽음:', e.message); }
+    console.log('\n사용: /skillsweep workflow <name> (실행 안내) · workflow save <name> (저장) · workflow delete <name>\n');
+  }
   process.exit(0);
+}
+
+// --save <name>: stdin 으로 받은 워크플로우 JSON 을 사용자 파일에 저장(쓰기는 여기 한 곳만).
+if (process.argv.includes('--save')) {
+  const name = argAfter('--save');
+  let wf;
+  try { wf = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); }
+  catch { console.log('저장 실패: 워크플로우 JSON 을 못 읽었어요(stdin).'); process.exit(1); }
+  const res = saveWorkflow(name, wf);
+  if (!res.ok) {
+    const why = { 'invalid-name': '이름이 올바르지 않아요(영숫자·한글·-·_ 1~40자).', 'reserved': '내장 템플릿 이름이라 다른 이름을 쓰세요.' }[res.reason] || res.reason;
+    console.log(`저장 실패: ${why}`);
+    process.exit(1);
+  }
+  console.log(res.overwritten ? `덮어써 저장했어요: ${name}` : `저장했어요: ${name}`);
+  process.exit(0);
+}
+
+// --delete <name>: 사용자 파일에서만 삭제.
+if (process.argv.includes('--delete')) {
+  const name = argAfter('--delete');
+  const res = removeWorkflow(name);
+  console.log(res.ok ? `삭제했어요: ${name}` : `삭제할 게 없어요: ${name}(내 워크플로우에 없음 — 내장 템플릿은 못 지워요).`);
+  process.exit(res.ok ? 0 : 1);
 }
 
 // gstack 가 9개 surface 폴더에 사본을 미러 → 접어서 안 센다
@@ -119,6 +150,18 @@ try { agentCount = fs.readdirSync(AGENTS).filter(f => f.endsWith('.md')).length;
 // dedupe
 const seen = new Set();
 const uniq = items.filter(it => { const k = it.source + '|' + it.name; if (seen.has(k)) return false; seen.add(k); return true; });
+
+// --get <name>: 워크플로우 1건(내장+사용자)을 고정스킬 실종 표시와 함께 JSON 으로 — run 안내용.
+if (process.argv.includes('--get')) {
+  const name = argAfter('--get');
+  let builtin = [];
+  try { builtin = JSON.parse(fs.readFileSync(path.join(SCRIPT_DIR, 'workflows.json'), 'utf8')).workflows || []; } catch {}
+  const found = [...builtin, ...loadUser()].find((w) => w.name === name);
+  if (!found) { console.log(JSON.stringify({ error: 'not-found', name })); process.exit(1); }
+  const installedIds = uniq.map((it) => it.source + ':' + it.name);
+  console.log(JSON.stringify(annotateMissing(found, installedIds), null, 2));
+  process.exit(0);
+}
 
 // 시드 키워드 표 (1단 — 넓게. 정밀 분리는 --judge 2단)
 const GROUPS = [
