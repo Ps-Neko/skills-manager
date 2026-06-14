@@ -31,7 +31,14 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 if (process.argv.includes('--save')) {
   const name = requireArg('--save');
   const raw = fs.readFileSync(0, 'utf8');
-  if (!raw.trim()) { console.log('저장 실패: stdin 이 비어 있어요. 워크플로우 JSON 을 파이프로 넘겨 주세요.'); process.exit(1); }
+  if (!raw.trim()) {
+    console.log('흐름을 저장하려면 단계가 필요해요. 두 가지 방법:');
+    console.log("  · 방금 본 recommend·workflow 결과를 저장: 그걸 띄운 뒤 '이걸로 저장'이라고 하세요");
+    console.log('  · 빈 흐름부터 직접: /skills-manager workflow save <이름> 후 단계를 채웁니다');
+    const mine = loadUser();
+    console.log(`지금 저장된 내 흐름: ${mine.length ? mine.map((w) => w.name).join(' · ') : '(없음)'}`);
+    process.exit(1);
+  }
   let wf;
   try { wf = JSON.parse(raw); }
   catch { console.log('저장 실패: 워크플로우 JSON 을 못 읽었어요(유효하지 않은 JSON).'); process.exit(1); }

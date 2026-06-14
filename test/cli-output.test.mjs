@@ -59,6 +59,18 @@ test('둘째 실행(흐름 저장됨): 환영 배너 사라짐', () => {
   assert.ok(!out.includes('처음 오셨네요'), '저장 후엔 배너 없음');
 });
 
+test('--save 빈 stdin: 사용법 + 예시 + 저장된 흐름 목록으로 안내', () => {
+  const home = fixtureHome();
+  const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-sm-'));
+  let err;
+  try { run(['--save', '내흐름'], { home, smHome }); }
+  catch (e) { err = e; }
+  assert.ok(err && err.status === 1, '빈 stdin 저장은 비0 종료');
+  assert.match(err.stdout, /흐름을 저장하려면 단계가 필요/);
+  assert.match(err.stdout, /이걸로 저장/);
+  assert.match(err.stdout, /지금 저장된 내 흐름: \(없음\)/);
+});
+
 test('--set-skill 범위초과: 단계 라벨 목록을 회신해 회복을 돕는다', () => {
   const home = fixtureHome();
   const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-sm-'));
