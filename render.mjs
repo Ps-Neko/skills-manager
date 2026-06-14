@@ -5,6 +5,7 @@
 const isWide = (cp) => (cp >= 0x1100 && cp <= 0x115F) || (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6);
 export const dispWidth = (s) => [...s].reduce((w, ch) => w + (isWide(ch.codePointAt(0)) ? 2 : 1), 0);
 export const padW = (s, w) => s + ' '.repeat(Math.max(1, w - dispWidth(s)));
+export const shortKo = (s) => ({ user: '직접', '.agents': '.agents' })[s] || s;
 
 // 겹침을 '곳 수' 내림차순(동순위는 입력 순서 보존 = 안정). 원본 비변형.
 export function sortedConflicts(conflicts) {
@@ -45,7 +46,6 @@ export function renderNextAction(conflicts) {
 // 깔린 스킬 분포. full=true 면 묶음별 상세, 아니면 한 줄.
 export function renderInventoryLine(uniqCount, by, mirrorFiles, { full = false } = {}) {
   if (!full) return `깔린 스킬 약 ${uniqCount}개.`;
-  const shortKo = (s) => ({ user: '직접', '.agents': '.agents' })[s] || s;
   const dist = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([s, n]) => `${shortKo(s)} ${n}`).join(' · ');
   return `깔린 스킬: 약 ${uniqCount}개 (도구용 사본 ${mirrorFiles}벌 접음)\n  ${dist}`;
 }
