@@ -9,9 +9,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill } from './workflow-store.mjs';
+import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps } from './workflow-store.mjs';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
+
+// 한글/CJK 는 터미널 폭 2 → 표 칸 정렬용 표시폭 기준 우측 패딩.
+const isWide = (cp) => (cp >= 0x1100 && cp <= 0x115F) || (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6);
+const dispWidth = (s) => [...s].reduce((w, ch) => w + (isWide(ch.codePointAt(0)) ? 2 : 1), 0);
+const padW = (s, w) => s + ' '.repeat(Math.max(1, w - dispWidth(s)));
 
 const requireArg = (flag) => {
   const v = argAfter(flag);
@@ -25,24 +30,6 @@ const SKILLS = path.join(CLAUDE, 'skills');
 const AGENTS = path.join(CLAUDE, 'agents');
 const PLUGINS = path.join(CLAUDE, 'plugins');
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
-
-// --workflows: 내장 템플릿 + 내가 저장한 워크플로우 목록 (스캔 없이 바로)
-if (process.argv.includes('--workflows')) {
-  let builtin = [];
-  try { builtin = JSON.parse(fs.readFileSync(path.join(SCRIPT_DIR, 'workflows.json'), 'utf8')).workflows || []; }
-  catch (e) { console.log('workflows.json 못 읽음:', e.message); }
-  const all = listAll(builtin, loadUser());
-  if (process.argv.includes('--json')) console.log(JSON.stringify({ workflows: all }, null, 2));
-  else {
-    console.log('\n워크플로우 목록:');
-    for (const w of all) {
-      const tag = w.source === 'user' ? '내 것 ' : '내장  ';
-      console.log(`  · [${tag}] ${w.name.padEnd(14)} ${w.label}   [${w.steps.map(s => s.capability).join(' → ')}]`);
-    }
-    console.log('\n사용: /skills-manager workflow <name> (실행) · save <name> · set-skill <name> --step N --skill <id|none> · delete <name>\n');
-  }
-  process.exit(0);
-}
 
 // --save <name>: stdin 으로 받은 워크플로우 JSON 을 사용자 파일에 저장(쓰기는 여기 한 곳만).
 if (process.argv.includes('--save')) {
@@ -77,7 +64,8 @@ if (process.argv.includes('--delete')) {
 }
 
 // ~/.claude/skills 가 없으면 스캔할 게 없음 — 친절히 안내하고 끝(크래시 방지).
-if (!fs.existsSync(SKILLS)) {
+// 단 --workflows 는 인벤토리가 비어도 워크플로우 목록은 보여줘야 하므로 통과시킨다.
+if (!fs.existsSync(SKILLS) && !process.argv.includes('--workflows')) {
   if (process.argv.includes('--json')) {
     console.log(JSON.stringify({
       version: '0.2.0',
@@ -137,7 +125,7 @@ if (fs.existsSync(gstackDir)) {
 }
 
 // (2) 최상위 스킬 (심링크 포함). 출처: gstack 깐 것 / .agents 심링크 / 직접 독립
-for (const e of fs.readdirSync(SKILLS, { withFileTypes: true })) {
+for (const e of (fs.existsSync(SKILLS) ? fs.readdirSync(SKILLS, { withFileTypes: true }) : [])) {
   if (e.name === 'gstack' || SURFACE.has(e.name) || IGNORE.has(e.name)) continue;
   const full = path.join(SKILLS, e.name);
   if (!isDir(full)) continue;                 // 심링크-디렉터리도 statSync로 true
@@ -251,6 +239,47 @@ const cov = {};
 for (const c of conflicts) for (const s of c.sources) cov[s] = (cov[s] || 0) + 1;
 const covSorted = Object.entries(cov).sort((a, b) => b[1] - a[1]);
 
+// groups: capability→스킬 묶음(=--json 의 groups). --json 과 --workflows 가 공유.
+const groupsByCap = {};
+const groups = GROUPS.map((g) => {
+  const hits = uniq.filter((it) => g.re.test(it.name) && !NOT_DUP.test(it.name));
+  if (!hits.length) return null;
+  const sources = [...new Set(hits.map((h) => h.source))];
+  const entry = { capability: g.cap, label: g.label, skills: hits.map((h) => h.source + ':' + h.name), sources, duplicateLevel: sources.length >= 2 ? 'high' : 'none' };
+  groupsByCap[g.cap] = entry;
+  return entry;
+}).filter(Boolean);
+
+// --workflows: 워크플로우 목록 + 각 단계의 쓸 스킬(인벤토리로 해소). 인벤토리·groups 뒤라야 함.
+if (process.argv.includes('--workflows')) {
+  let builtin = [];
+  try { builtin = JSON.parse(fs.readFileSync(path.join(SCRIPT_DIR, 'workflows.json'), 'utf8')).workflows || []; }
+  catch (e) { console.log('workflows.json 못 읽음:', e.message); }
+  const all = listAll(builtin, loadUser());
+  if (process.argv.includes('--json')) {
+    const enriched = all.map((w) => ({ ...w, steps: resolveSteps(w, groupsByCap) }));
+    console.log(JSON.stringify({ workflows: enriched }, null, 2));
+  } else {
+    console.log('\n워크플로우 목록 (단계별 쓸 스킬):');
+    for (const w of all) {
+      const tag = w.source === 'user' ? '내 것' : '내장';
+      console.log(`\n[${w.label} · ${w.name}]  (${tag})`);
+      const steps = resolveSteps(w, groupsByCap);
+      steps.forEach((s, i) => {
+        const r = s.resolved;
+        let col;
+        if (r.kind === 'pinned') col = `고정: ${r.skills[0]}`;
+        else if (r.kind === 'none') col = '기본 Claude로 (전담 스킬 없음)';
+        else col = `${r.count}곳 — ${r.sources.join('·')} 중 하나`;
+        console.log(`  ${String(i + 1).padStart(2)}  ${padW(r.label, 22)}${col}`);
+      });
+    }
+    console.log('\n표의 "N곳"은 넓게 잡은 수예요(역할 다른 건 제시 때 가려드림).');
+    console.log('자주 쓰는 하나로 흐름 저장: workflow save <이름> · set-skill <이름> · <이름>(실행)\n');
+  }
+  process.exit(0);
+}
+
 // ── --json: 구조화된 스킬 인벤토리 (추천기·워크플로우의 기반) ──
 if (process.argv.includes('--json')) {
   const penabled = Object.fromEntries(plugins.map(p => [p.short, p.enabled !== false]));
@@ -269,12 +298,7 @@ if (process.argv.includes('--json')) {
       enabled: it.source in penabled ? penabled[it.source] : true,
       capabilities: capsOf(it.name),
     })),
-    groups: GROUPS.map(g => {
-      const hits = uniq.filter(it => g.re.test(it.name) && !NOT_DUP.test(it.name));
-      if (!hits.length) return null;
-      const sources = [...new Set(hits.map(h => h.source))];
-      return { capability: g.cap, label: g.label, skills: hits.map(h => h.source + ':' + h.name), sources, duplicateLevel: sources.length >= 2 ? 'high' : 'none' };
-    }).filter(Boolean),
+    groups,
   };
   console.log(JSON.stringify(out, null, 2));
   process.exit(0);
