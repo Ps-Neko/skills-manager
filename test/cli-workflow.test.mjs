@@ -59,3 +59,82 @@ test('--get reports not-found as JSON with exit 1', () => {
   assert.strictEqual(parsed.error, 'not-found');
   assert.strictEqual(parsed.name, 'nope');
 });
+
+test('--set-skill changes a saved step skill (exit 0 + 파일 반영)', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  const wf = JSON.stringify({ label: '내 흐름', steps: [
+    { capability: 'tdd', skill: null, note: '' },
+    { capability: 'review', skill: null, note: '' },
+  ] });
+  run(['--save', 'mine'], { input: wf, home });
+  const out = run(['--set-skill', 'mine', '--step', '2', '--skill', 'agent-skills:code-review-and-quality'], { home });
+  assert.match(out, /고쳤어요/);
+  const got = JSON.parse(run(['--get', 'mine'], { home }));
+  assert.strictEqual(got.steps[1].skill, 'agent-skills:code-review-and-quality');
+  assert.strictEqual(got.steps[0].skill, null);
+});
+
+test('--set-skill --skill none clears the pin', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  const wf = JSON.stringify({ label: 'm', steps: [{ capability: 'tdd', skill: 'x:y', note: '' }] });
+  run(['--save', 'mine'], { input: wf, home });
+  const out = run(['--set-skill', 'mine', '--step', '1', '--skill', 'none'], { home });
+  assert.match(out, /비움/);
+  const got = JSON.parse(run(['--get', 'mine'], { home }));
+  assert.strictEqual(got.steps[0].skill, null);
+});
+
+test('--set-skill warns for an uninstalled skill but still sets it', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  const wf = JSON.stringify({ label: 'm', steps: [{ capability: 'tdd', skill: null, note: '' }] });
+  run(['--save', 'mine'], { input: wf, home });
+  const out = run(['--set-skill', 'mine', '--step', '1', '--skill', '__nope__:__x__'], { home });
+  assert.match(out, /주의/);
+  assert.match(out, /고쳤어요/);
+  const got = JSON.parse(run(['--get', 'mine'], { home }));
+  assert.strictEqual(got.steps[0].skill, '__nope__:__x__');
+});
+
+test('--set-skill on a reserved built-in name fails (exit 1)', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  let err;
+  try { run(['--set-skill', 'app-dev', '--step', '1', '--skill', 'a:b'], { home }); }
+  catch (e) { err = e; }
+  assert.ok(err);
+  assert.strictEqual(err.status, 1);
+  assert.match(err.stdout, /내장 템플릿은 못 고쳐요/);
+});
+
+test('--set-skill on an unknown workflow fails (exit 1)', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  let err;
+  try { run(['--set-skill', 'ghost', '--step', '1', '--skill', 'a:b'], { home }); }
+  catch (e) { err = e; }
+  assert.ok(err);
+  assert.strictEqual(err.status, 1);
+  assert.match(err.stdout, /내 워크플로우에 없어요/);
+});
+
+test('--set-skill with out-of-range step fails (exit 1)', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  const wf = JSON.stringify({ label: 'm', steps: [{ capability: 'tdd', skill: null }] });
+  run(['--save', 'mine'], { input: wf, home });
+  let err;
+  try { run(['--set-skill', 'mine', '--step', '9', '--skill', 'a:b'], { home }); }
+  catch (e) { err = e; }
+  assert.ok(err);
+  assert.strictEqual(err.status, 1);
+  assert.match(err.stdout, /범위를 벗어났어요/);
+});
+
+test('--set-skill without --skill shows usage (exit 1)', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  const wf = JSON.stringify({ label: 'm', steps: [{ capability: 'tdd', skill: null }] });
+  run(['--save', 'mine'], { input: wf, home });
+  let err;
+  try { run(['--set-skill', 'mine', '--step', '1'], { home }); }
+  catch (e) { err = e; }
+  assert.ok(err);
+  assert.strictEqual(err.status, 1);
+  assert.match(err.stdout, /사용법/);
+});
