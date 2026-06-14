@@ -35,3 +35,27 @@ test('--save writes to the user home, --workflows --json lists it, --delete remo
   const after = JSON.parse(run(['--workflows', '--json'], { home }));
   assert.ok(!after.workflows.find((w) => w.name === 'my-release'));
 });
+
+test('--save rejects a reserved built-in name (non-zero exit + 안내 메시지)', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  const wf = JSON.stringify({ label: 'x', steps: [] });
+  let err;
+  try { run(['--save', 'release-check'], { input: wf, home }); }
+  catch (e) { err = e; }
+  assert.ok(err, '예약 이름 저장은 비0 종료로 throw 해야 함');
+  assert.notStrictEqual(err.status, 0);
+  assert.match(err.stdout, /내장 템플릿 이름/);
+  assert.ok(!fs.existsSync(path.join(home, 'skillsweep-workflows.json')), '예약 이름은 파일을 안 만든다');
+});
+
+test('--get reports not-found as JSON with exit 1', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  let err;
+  try { run(['--get', 'nope'], { home }); }
+  catch (e) { err = e; }
+  assert.ok(err, '없는 이름 --get 은 비0 종료로 throw 해야 함');
+  assert.strictEqual(err.status, 1);
+  const parsed = JSON.parse(err.stdout);
+  assert.strictEqual(parsed.error, 'not-found');
+  assert.strictEqual(parsed.name, 'nope');
+});

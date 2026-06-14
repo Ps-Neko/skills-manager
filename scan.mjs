@@ -13,6 +13,12 @@ import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing } from
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
+const requireArg = (flag) => {
+  const v = argAfter(flag);
+  if (!v || v.startsWith('--')) { console.log(`사용법: ${flag} <이름>`); process.exit(1); }
+  return v;
+};
+
 const HOME = os.homedir();
 const CLAUDE = path.join(HOME, '.claude');
 const SKILLS = path.join(CLAUDE, 'skills');
@@ -40,10 +46,12 @@ if (process.argv.includes('--workflows')) {
 
 // --save <name>: stdin 으로 받은 워크플로우 JSON 을 사용자 파일에 저장(쓰기는 여기 한 곳만).
 if (process.argv.includes('--save')) {
-  const name = argAfter('--save');
+  const name = requireArg('--save');
+  const raw = fs.readFileSync(0, 'utf8');
+  if (!raw.trim()) { console.log('저장 실패: stdin 이 비어 있어요. 워크플로우 JSON 을 파이프로 넘겨 주세요.'); process.exit(1); }
   let wf;
-  try { wf = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); }
-  catch { console.log('저장 실패: 워크플로우 JSON 을 못 읽었어요(stdin).'); process.exit(1); }
+  try { wf = JSON.parse(raw); }
+  catch { console.log('저장 실패: 워크플로우 JSON 을 못 읽었어요(유효하지 않은 JSON).'); process.exit(1); }
   const res = saveWorkflow(name, wf);
   if (!res.ok) {
     const why = { 'invalid-name': '이름이 올바르지 않아요(영숫자·한글·-·_ 1~40자).', 'reserved': '내장 템플릿 이름이라 다른 이름을 쓰세요.' }[res.reason] || res.reason;
@@ -56,10 +64,16 @@ if (process.argv.includes('--save')) {
 
 // --delete <name>: 사용자 파일에서만 삭제.
 if (process.argv.includes('--delete')) {
-  const name = argAfter('--delete');
+  const name = requireArg('--delete');
   const res = removeWorkflow(name);
-  console.log(res.ok ? `삭제했어요: ${name}` : `삭제할 게 없어요: ${name}(내 워크플로우에 없음 — 내장 템플릿은 못 지워요).`);
-  process.exit(res.ok ? 0 : 1);
+  if (!res.ok) {
+    console.log(res.reason === 'invalid-name'
+      ? '이름이 올바르지 않아요(영숫자·한글·-·_ 1~40자).'
+      : `삭제할 게 없어요: ${name} (내 워크플로우에 없음 — 내장 템플릿은 못 지워요).`);
+    process.exit(1);
+  }
+  console.log(`삭제했어요: ${name}`);
+  process.exit(0);
 }
 
 // gstack 가 9개 surface 폴더에 사본을 미러 → 접어서 안 센다
@@ -153,7 +167,7 @@ const uniq = items.filter(it => { const k = it.source + '|' + it.name; if (seen.
 
 // --get <name>: 워크플로우 1건(내장+사용자)을 고정스킬 실종 표시와 함께 JSON 으로 — run 안내용.
 if (process.argv.includes('--get')) {
-  const name = argAfter('--get');
+  const name = requireArg('--get');
   let builtin = [];
   try { builtin = JSON.parse(fs.readFileSync(path.join(SCRIPT_DIR, 'workflows.json'), 'utf8')).workflows || []; } catch {}
   const found = [...builtin, ...loadUser()].find((w) => w.name === name);
