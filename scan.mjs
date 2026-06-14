@@ -2,7 +2,7 @@
 // skillsweep (스킬쓸이) — 스킬 중복 지도 + 워크플로우
 // ~/.claude 의 스킬·에이전트·플러그인을 "읽기 전용"으로 훑어,
 // 같은 일을 하는 스킬이 여러 출처에 겹쳐 깔린 걸 평한국어 지도로 보여준다.
-// ⚠️ 검사·추천은 읽기 전용(안 끄고 안 바꿈). 쓰기는 워크플로우 저장 파일 한 곳만.
+// [경계] 검사·추천은 읽기 전용(안 끄고 안 바꿈). 쓰기는 워크플로우 저장 파일 한 곳만.
 //   1단(키워드)으로 후보를 넓게 묶고, 2단 정밀 판정은 `--judge` 패킷을 LLM이 읽어서.
 
 import fs from 'node:fs';
@@ -34,7 +34,7 @@ if (process.argv.includes('--workflows')) {
   const all = listAll(builtin, loadUser());
   if (process.argv.includes('--json')) console.log(JSON.stringify({ workflows: all }, null, 2));
   else {
-    console.log('\n🧭 워크플로우:');
+    console.log('\n워크플로우 목록:');
     for (const w of all) {
       const tag = w.source === 'user' ? '내 것 ' : '내장  ';
       console.log(`  · [${tag}] ${w.name.padEnd(14)} ${w.label}   [${w.steps.map(s => s.capability).join(' → ')}]`);
@@ -86,7 +86,7 @@ if (!fs.existsSync(SKILLS)) {
       plugins: [], skills: [], groups: [],
     }, null, 2));
   } else {
-    console.log(`\n🧹  스킬쓸이 — ~/.claude/skills 폴더를 찾지 못했어요.\n   Claude Code 스킬이 아직 설치되지 않았거나 경로가 다릅니다.\n   (찾은 경로: ${SKILLS})\n`);
+    console.log(`\n스킬쓸이 — ~/.claude/skills 폴더를 찾지 못했어요.\n   Claude Code 스킬이 아직 설치되지 않았거나 경로가 다릅니다.\n   (찾은 경로: ${SKILLS})\n`);
   }
   process.exit(0);
 }
@@ -194,13 +194,13 @@ if (process.argv.includes('--get')) {
 
 // 시드 키워드 표 (1단 — 넓게. 정밀 분리는 --judge 2단)
 const GROUPS = [
-  { cap: 'tdd', label: '테스트 먼저 짜기 (TDD)', re: /(^|[-_])tdd($|[-_])|test-driven|red-green/i },
+  { cap: 'tdd', label: '테스트 먼저 짜기', re: /(^|[-_])tdd($|[-_])|test-driven|red-green/i },
   { cap: 'review', label: '코드 리뷰', re: /code-review|requesting-code|receiving-code|review-and-quality|^review$/i },
   { cap: 'plan', label: '계획 세우기', re: /writing-plans|planning-and-task|task-breakdown|^plan$|^planning$/i },
-  { cap: 'debug', label: '디버깅', re: /debug|diagnose|investigate|error-recovery/i },
-  { cap: 'brainstorm', label: '아이디어/브레인스토밍', re: /brainstorm|idea-refine|ideate|office-hours|interview-me|grill/i },
+  { cap: 'debug', label: '오류 찾기', re: /debug|diagnose|investigate|error-recovery/i },
+  { cap: 'brainstorm', label: '아이디어 짜기', re: /brainstorm|idea-refine|ideate|office-hours|interview-me|grill/i },
   { cap: 'spec', label: '스펙 작성', re: /(^|[-_])spec($|[-_])|spec-driven/i },
-  { cap: 'ship', label: '배포/출시', re: /(^|[-_])ship($|[-_])|deploy|launch|shipping/i },
+  { cap: 'ship', label: '배포', re: /(^|[-_])ship($|[-_])|deploy|launch|shipping/i },
   { cap: 'security', label: '보안 점검', re: /security|hardening|(^|[-_])cso($|[-_])/i },
   { cap: 'simplify', label: '코드 단순화', re: /simplif/i },
 ];
@@ -247,45 +247,46 @@ if (process.argv.includes('--json')) {
   process.exit(0);
 }
 
-// ---- 출력 ----
+// ---- 출력 (기본 = 사람용 / 상세·영어 이름은 --judge·--json = 기계·개발자용) ----
 const SRC_KO = { gstack: 'gstack', '.agents': '.agents(심링크)', user: '직접 설치', 'agent-skills': 'agent-skills', superpowers: 'superpowers', codex: 'codex', harness: 'harness', '외부': '외부 링크' };
+const isJudge = process.argv.includes('--judge');
 const by = {}; for (const it of uniq) by[it.source] = (by[it.source] || 0) + 1;
 const line = '─'.repeat(54);
-console.log('\n🧹  스킬쓸이 (skillsweep) — 검사 결과   (읽기 전용 · 아무것도 끄지 않았어요)');
+console.log('\n스킬쓸이 — 검사 결과 (보여주기만, 아무것도 안 바꿔요)');
+if (conflicts.length) {
+  console.log(`한 줄: 스킬이 ${uniq.length}개 깔렸고, 같은 일이 ${conflicts.length}가지 겹쳐 있어요.`);
+  console.log(`       끌 필요는 없고, 자주 하는 작업을 '내 흐름'으로 저장해 쓰면 됩니다.`);
+}
 console.log(line);
-console.log(`내 Claude 안에 깔린 스킬: 의미 단위로 약 ${uniq.length}개`);
-console.log(`  · gstack 묶음            : ${by.gstack || 0}개  (도구용 사본 ${mirrorFiles}벌은 정상이라 접었어요)`);
-if (by['.agents']) console.log(`  · .agents 묶음(심링크)   : ${by['.agents']}개  (~/.agents/skills 에 있는 걸 끌어다 씀)`);
-console.log(`  · 직접 설치(독립)        : ${by.user || 0}개`);
-console.log(`  · 플러그인               : ${plugins.length}개`);
-for (const p of plugins) console.log(`       - ${p.short.padEnd(14)} ${p.enabled === false ? '꺼짐' : '켜짐'} · 스킬 ${p.count}개`);
-console.log(`  · 에이전트               : ${agentCount}개`);
-console.log(line);
+if (isJudge) { // 자세한 수·묶음 분포는 개발자용(--judge)에만
+  console.log(`깔린 스킬: 의미 단위로 약 ${uniq.length}개  (도구용 사본 ${mirrorFiles}벌은 접음)`);
+  console.log(`  · gstack 묶음   : ${by.gstack || 0}개`);
+  if (by['.agents']) console.log(`  · .agents 묶음  : ${by['.agents']}개`);
+  console.log(`  · 직접 설치     : ${by.user || 0}개`);
+  console.log(`  · 플러그인 묶음 : ${plugins.length}개  (${plugins.map(p => p.enabled === false ? `${p.short} ${p.count}(꺼짐)` : `${p.short} ${p.count}`).join(' · ')})`);
+  console.log(line);
+}
 
 if (conflicts.length === 0) {
-  console.log('\n✅ 같은 일을 하는 스킬이 여러 개 겹친 곳은 없어요. 깔끔합니다.');
+  console.log('같은 일이 겹친 곳은 없어요. 깔끔합니다.');
 } else {
-  console.log(`\n⚠️  같은 일을 하는 스킬이 여러 묶음에 겹쳐 있어요 — ${conflicts.length}군데:\n`);
-  for (const c of conflicts) {
-    console.log(`  • ${c.label} — ${c.hits.length}곳 (${c.sources.length}개 출처)`);
-    for (const h of c.hits) console.log(`       · ${h.name}  (${SRC_KO[h.source] || h.source})`);
-    console.log(`     → 같은 일이 여러 묶음에 있어요. (작업할 땐 이 중 하나만 쓰면 됩니다.)\n`);
-  }
+  console.log(`같은 일이 겹친 곳 — ${conflicts.length}가지:`);
+  for (const c of conflicts) console.log(`  · ${c.label} — ${c.hits.length}곳`);
   console.log(line);
-  console.log(`✅ 겹친 곳 ${conflicts.length}군데 — 작업할 땐 무리마다 하나씩만 쓰면 됩니다.`);
-  console.log(`   (진짜 같은 일인지·역할만 다른지는 설명을 읽고 가려요)`);
-  console.log(`\n어느 묶음을 '기본'으로 쓸지 정해두면, 같은 일은 늘 거기서 고르면 됩니다.`);
-  console.log(`겹친 영역(${conflicts.length}개) 커버 — 많이 커버할수록 기본 후보:`);
-  for (const [s, n] of covSorted) console.log(`   · ${(SRC_KO[s] || s).padEnd(16)} ${n}/${conflicts.length} 영역`);
-  console.log(`   → '${SRC_KO[covSorted[0][0]] || covSorted[0][0]}' 가 가장 많이 커버해요. 단, 묶음마다 겹치지 않는 고유 스킬도 있으니 선택은 본인 몫.`);
-  console.log(`\n※ 단, '끄기'는 대부분 안 돼요 — 겹친 게 플러그인 안에 있고, 플러그인은 통째로만 꺼지거든요`);
-  console.log(`   (하나 끄려다 고유한 것까지 잃어요). 그래서 이 도구는 '보여주는 지도'까지만 합니다.`);
+  console.log(`겹친 게 많아도 끌 필요 없어요 — 작업할 땐 무리마다 하나씩만 쓰면 됩니다.`);
+  console.log(`(진짜 같은 일인지·역할만 다른지는 다음 단계에서 설명을 읽고 가려요.)`);
+  console.log(`\n가장 많이 겹친 묶음: ${SRC_KO[covSorted[0][0]] || covSorted[0][0]} — 이걸 '기본'으로 정해두면 편해요.`);
+  console.log(`(묶음마다 겹치지 않는 고유 스킬도 있으니 선택은 본인 몫.)`);
+  console.log(`\n단, '끄기'는 대부분 안 돼요 — 겹친 게 묶음(플러그인) 안에 있고, 묶음은 통째로만 꺼지거든요`);
+  console.log(`(하나 끄려다 멀쩡한 것까지 잃어요). 그래서 이 도구는 보여주는 데까지만 합니다.`);
 }
 console.log(`\n이렇게 쓰세요:`);
-console.log(`  /skillsweep                   — 겹친 스킬 지도 (지금 이거)`);
+console.log(`  /skillsweep                   — 겹친 스킬 보기 (지금 이거)`);
 console.log(`  /skillsweep recommend "작업"   — 이 작업엔 어떤 순서로 뭘 쓸지`);
 console.log(`  /skillsweep workflow list      — 저장한 흐름 보기`);
-console.log(`  /skillsweep workflow save 이름  — 지금 흐름을 이름 붙여 저장\n`);
+console.log(`  /skillsweep workflow save 이름  — 지금 흐름을 이름 붙여 저장`);
+if (!isJudge) console.log(`\n(자세히·개발자용: node scan.mjs --judge)`);
+console.log('');
 
 // ── 2단 판정 패킷 (LLM이 설명 읽고 진짜 중복 가려내기) ──
 if (process.argv.includes('--judge') && conflicts.length) {
