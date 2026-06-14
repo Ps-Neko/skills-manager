@@ -261,21 +261,24 @@ if (process.argv.includes('--workflows')) {
     console.log(JSON.stringify({ workflows: enriched }, null, 2));
   } else {
     console.log('\n워크플로우 목록 (단계별 쓸 스킬):');
-    for (const w of all) {
+    // 라벨 열 폭은 실제 라벨들의 최대 표시폭+2 로 — 라벨이 길어져도 'N곳' 열이 들쭉날쭉하지 않게.
+    const resolved = all.map((w) => ({ w, steps: resolveSteps(w, groupsByCap) }));
+    const LW = Math.max(2, ...resolved.flatMap((r) => r.steps.map((s) => dispWidth(s.resolved.label)))) + 2;
+    for (const { w, steps } of resolved) {
       const tag = w.source === 'user' ? '내 것' : '내장';
       console.log(`\n[${w.label} · ${w.name}]  (${tag})`);
-      const steps = resolveSteps(w, groupsByCap);
       steps.forEach((s, i) => {
         const r = s.resolved;
         let col;
         if (r.kind === 'pinned') col = `고정: ${r.skills[0]}`;
         else if (r.kind === 'none') col = '기본 Claude로 (전담 스킬 없음)';
-        else col = `${r.count}곳 — ${r.sources.join('·')} 중 하나`;
-        console.log(`  ${String(i + 1).padStart(2)}  ${padW(r.label, 22)}${col}`);
+        else if (r.count === 1) col = `1곳 — ${r.sources[0]}`;
+        else col = `${r.count}곳 겹침 — ${r.sources.join('·')}`;
+        console.log(`  ${String(i + 1).padStart(2)}  ${padW(r.label, LW)}${col}`);
       });
     }
-    console.log('\n표의 "N곳"은 넓게 잡은 수예요(역할 다른 건 제시 때 가려드림).');
-    console.log('자주 쓰는 하나로 흐름 저장: workflow save <이름> · set-skill <이름> · <이름>(실행)\n');
+    console.log('\n표의 "N곳"은 넓게 잡은 수예요 — 역할이 다른 건 추천·실행 때 추려 드려요.');
+    console.log('자주 쓰는 하나로 굳히려면: workflow save <이름> · set-skill <이름> · <이름>(실행)\n');
   }
   process.exit(0);
 }
