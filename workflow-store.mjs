@@ -98,7 +98,10 @@ export function setStepSkill(name, stepIndex, skillId, file = defaultUserFile())
   if (!wf) return { ok: false, reason: 'not-found' };
   const steps = Array.isArray(wf.steps) ? wf.steps : [];
   if (!Number.isInteger(stepIndex) || stepIndex < 1 || stepIndex > steps.length) {
-    return { ok: false, reason: 'bad-step', stepCount: steps.length };
+    return {
+      ok: false, reason: 'bad-step', stepCount: steps.length,
+      steps: steps.map((s, i) => ({ n: i + 1, capability: s.capability, label: CAP_LABEL[s.capability] || s.capability })),
+    };
   }
   const step = steps[stepIndex - 1];
   step.skill = skillId == null ? null : String(skillId);

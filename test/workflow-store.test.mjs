@@ -234,3 +234,14 @@ test('resolveSteps: 정적 라벨도 없는 미지 cap 은 원문으로 폴백',
   assert.strictEqual(s.resolved.kind, 'none');
   assert.strictEqual(s.resolved.label, 'zzz-unknown');
 });
+
+test('setStepSkill bad-step 은 단계 라벨 목록을 함께 돌려준다(관대한 에러용)', () => {
+  const file = tmpFile();
+  saveWorkflow('mine', { steps: [{ capability: 'debug' }, { capability: 'tdd' }, { capability: 'review' }] }, file);
+  const res = setStepSkill('mine', 9, 'a:b', file);
+  assert.strictEqual(res.reason, 'bad-step');
+  assert.strictEqual(res.stepCount, 3);              // 기존 계약 유지
+  assert.deepStrictEqual(res.steps.map((s) => s.n), [1, 2, 3]);
+  assert.strictEqual(res.steps[0].label, '디버깅');   // CAP_LABEL 적용
+  assert.strictEqual(res.steps[1].label, '테스트 먼저 짜기 (TDD)');
+});

@@ -203,6 +203,9 @@ if (process.argv.includes('--set-skill')) {
       'bad-step': `단계 번호가 범위를 벗어났어요: ${stepNum} (이 흐름은 1~${res.stepCount}단계).`,
     }[res.reason] || res.reason;
     console.log(`수정 실패: ${why}`);
+    if (res.reason === 'bad-step' && res.steps && res.steps.length) {
+      console.log(`  이 흐름의 단계: ${res.steps.map((s) => `${s.n} ${s.label}`).join(' · ')}`);
+    }
     process.exit(1);
   }
   console.log(`고쳤어요: ${name}의 ${stepNum}단계(${res.capability}) 스킬을 '${res.skill ?? '비움'}'로 설정.`);
