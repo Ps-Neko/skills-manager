@@ -10,7 +10,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps, CAP_LABEL } from './workflow-store.mjs';
-import { dispWidth, padW, sortedConflicts, renderOverlaps, renderNextAction, renderInventoryLine, firstRunBanner } from './render.mjs';
+import { dispWidth, padW, shortKo, sortedConflicts, renderOverlaps, renderNextAction, renderInventoryLine, firstRunBanner } from './render.mjs';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
@@ -305,36 +305,37 @@ if (process.argv.includes('--json')) {
   process.exit(0);
 }
 
-// ---- 출력 (기본 = 사람용 / 상세·영어 이름은 --judge·--json = 기계·개발자용) ----
+// ---- 출력 (기본 = 사람용 접힘 / --all·--judge = 전체 / --judge 는 판정 패킷도) ----
 const SRC_KO = { gstack: 'gstack', '.agents': '.agents(심링크)', user: '직접 설치', 'agent-skills': 'agent-skills', superpowers: 'superpowers', codex: 'codex', harness: 'harness', '외부': '외부 링크' };
 const isJudge = process.argv.includes('--judge');
+const full = process.argv.includes('--all') || isJudge;          // 전체 벽(상세) 표시 여부
 const by = {}; for (const it of uniq) by[it.source] = (by[it.source] || 0) + 1;
-const line = '─'.repeat(54);
-console.log('\nSkills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)');
-if (conflicts.length) {
-  console.log(`한 줄: 스킬 ${uniq.length}개 중 같은 일이 ${conflicts.length}가지 겹침. 끌 필요 없고,`);
-  console.log(`       자주 하는 작업을 '내 흐름'으로 저장해 쓰면 됨.`);
-}
-console.log(line);
-const shortKo = (s) => ({ user: '직접', '.agents': '.agents' })[s] || s;
-console.log(`깔린 스킬: 약 ${uniq.length}개 (도구용 사본 ${mirrorFiles}벌 접음)`);
-console.log(`  ${Object.entries(by).sort((a, b) => b[1] - a[1]).map(([s, n]) => `${shortKo(s)} ${n}`).join(' · ')}`);
-console.log(line);
+const firstRun = !full && loadUser().length === 0;               // 저장된 흐름 0개 = 처음 쓰는 사람(읽기 전용 추정)
 
-if (conflicts.length === 0) {
-  console.log('같은 일이 겹친 곳 없음. 깔끔함.');
+if (firstRun) console.log('\n' + firstRunBanner());
+console.log('\nSkills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)');
+
+// 한 줄 결론 — 항상(겹침 유무 무관). 여백으로 격리해 첫 시선이 여기 걸리게.
+const conclusion = conflicts.length
+  ? `한 줄: 스킬 ${uniq.length}개 중 같은 일이 ${conflicts.length}가지 겹침. 끌 건 없고, 자주 하는 작업을 '내 흐름'으로 저장하면 됨.`
+  : `한 줄: 스킬 ${uniq.length}개, 같은 일이 겹친 곳 없음. 깔끔함.`;
+console.log('\n  ' + conclusion + '\n');
+
+console.log(renderOverlaps(conflicts, { full }));
+
+if (full) {
+  console.log('\n' + renderInventoryLine(uniq.length, by, mirrorFiles, { full: true }));
+  if (conflicts.length) {
+    console.log(`\n기본으로 둘 묶음 (겹친 ${conflicts.length}가지 중 몇에 끼나):`);
+    console.log(`  ${covSorted.map(([s, n]) => `${shortKo(s)} ${n}`).join(' · ')}`);
+    console.log(`  → ${shortKo(covSorted[0][0])}가 가장 많음. 기본으로 두면 편함 (단, 묶음마다 고유 스킬도 있으니 본인 몫).`);
+    console.log(`\n끄기는 거의 안 됨 — 겹친 게 플러그인 안이고, 플러그인은 통째로만 꺼져서 하나 빼려다 고유한 것까지 잃음. 그래서 보여주는 데까지만.`);
+  }
 } else {
-  console.log(`같은 일이 겹친 곳 — ${conflicts.length}가지:`);
-  for (const c of conflicts) console.log(`  · ${c.label} — ${c.hits.length}곳`);
-  console.log(line);
-  console.log(`기본으로 둘 묶음 (겹친 ${conflicts.length}가지 중 몇에 끼나):`);
-  console.log(`  ${covSorted.map(([s, n]) => `${shortKo(s)} ${n}`).join(' · ')}`);
-  console.log(`  → ${shortKo(covSorted[0][0])}가 가장 많음. 기본으로 두면 편함 (단, 묶음마다 고유 스킬도 있으니 본인 몫).`);
-  console.log(`\n끄기는 거의 안 됨 — 겹친 게 플러그인 안이고, 플러그인은 통째로만 꺼져서 하나 빼려다`);
-  console.log(`고유한 것까지 잃음. 그래서 보여주는 데까지만.`);
+  console.log('\n' + renderInventoryLine(uniq.length, by, mirrorFiles, { full: false }) + ' 끌 건 없음 — 전체 보기: node scan.mjs --all');
 }
-console.log(`\n쓰는 법: /skills-manager recommend "작업"  ·  workflow list  ·  workflow save 이름`);
-if (!isJudge) console.log(`자세히(영어 이름·각 스킬 설명): node scan.mjs --judge`);
+
+console.log('\n' + renderNextAction(conflicts));
 console.log('');
 
 // ── 2단 판정 패킷 (LLM이 설명 읽고 진짜 중복 가려내기) ──
