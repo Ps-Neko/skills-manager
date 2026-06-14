@@ -198,7 +198,7 @@ for (const g of GROUPS) {
   const sources = [...new Set(hits.map(h => h.source))];
   if (hits.length >= 2 && sources.length >= 2) conflicts.push({ label: g.label, hits, sources });
 }
-// 출처별 "충돌영역 커버 수" — 어느 묶음을 메인으로 둘지 정하는 근거(측정 가능한 사실)
+// 출처별 "겹친 영역 커버 수" — 어느 묶음을 기본으로 둘지 정하는 근거(측정 가능한 사실)
 const cov = {};
 for (const c of conflicts) for (const s of c.sources) cov[s] = (cov[s] || 0) + 1;
 const covSorted = Object.entries(cov).sort((a, b) => b[1] - a[1]);
@@ -250,22 +250,27 @@ console.log(line);
 if (conflicts.length === 0) {
   console.log('\n✅ 같은 일을 하는 스킬이 여러 개 겹친 곳은 없어요. 깔끔합니다.');
 } else {
-  console.log(`\n⚠️  같은 일을 하는 스킬이 여러 출처에 겹쳐 있어요 — ${conflicts.length}군데:\n`);
-  let saved = 0;
+  console.log(`\n⚠️  같은 일을 하는 스킬이 여러 묶음에 겹쳐 있어요 — ${conflicts.length}군데:\n`);
   for (const c of conflicts) {
     console.log(`  • ${c.label} — ${c.hits.length}곳 (${c.sources.length}개 출처)`);
     for (const h of c.hits) console.log(`       · ${h.name}  (${SRC_KO[h.source] || h.source})`);
-    console.log(`     → 같은 일이니, 메인으로 정한 묶음 것만 남기고 나머지 출처 걸 끄면 충돌이 없어요.\n`);
-    saved += c.hits.length - 1;
+    console.log(`     → 같은 일이 여러 묶음에 있어요. (작업할 땐 이 중 하나만 쓰면 됩니다.)\n`);
   }
   console.log(line);
-  console.log(`✅ 겹치는 것 정리하면(무리마다 1개만 남기면): 약 ${saved}개를 끌 수 있어요.`);
-  console.log(`\n어느 묶음을 메인으로 둘지 정하면 나머지 출처의 중복분을 끄면 됩니다.`);
-  console.log(`충돌영역(${conflicts.length}개) 커버 — 많이 커버할수록 메인 후보:`);
+  console.log(`✅ 겹친 곳 ${conflicts.length}군데 — 작업할 땐 무리마다 하나씩만 쓰면 됩니다.`);
+  console.log(`   (진짜 같은 일인지·역할만 다른지는 설명을 읽고 가려요)`);
+  console.log(`\n어느 묶음을 '기본'으로 쓸지 정해두면, 같은 일은 늘 거기서 고르면 됩니다.`);
+  console.log(`겹친 영역(${conflicts.length}개) 커버 — 많이 커버할수록 기본 후보:`);
   for (const [s, n] of covSorted) console.log(`   · ${(SRC_KO[s] || s).padEnd(16)} ${n}/${conflicts.length} 영역`);
-  console.log(`   → '${SRC_KO[covSorted[0][0]] || covSorted[0][0]}' 가 가장 많이 커버해요. 단, 묶음마다 겹치지 않는 고유 스킬도 있으니 메인 선택은 본인 몫.`);
+  console.log(`   → '${SRC_KO[covSorted[0][0]] || covSorted[0][0]}' 가 가장 많이 커버해요. 단, 묶음마다 겹치지 않는 고유 스킬도 있으니 선택은 본인 몫.`);
+  console.log(`\n※ 단, '끄기'는 대부분 안 돼요 — 겹친 게 플러그인 안에 있고, 플러그인은 통째로만 꺼지거든요`);
+  console.log(`   (하나 끄려다 고유한 것까지 잃어요). 그래서 이 도구는 '보여주는 지도'까지만 합니다.`);
 }
-console.log(`\n(추천만 보여드린 거예요. 실제로 끄는 건 다음 단계에서 동의받고 되돌릴 수 있게 합니다.)\n`);
+console.log(`\n이렇게 쓰세요:`);
+console.log(`  /skillsweep                   — 겹친 스킬 지도 (지금 이거)`);
+console.log(`  /skillsweep recommend "작업"   — 이 작업엔 어떤 순서로 뭘 쓸지`);
+console.log(`  /skillsweep workflow list      — 저장한 흐름 보기`);
+console.log(`  /skillsweep workflow save 이름  — 지금 흐름을 이름 붙여 저장\n`);
 
 // ── 2단 판정 패킷 (LLM이 설명 읽고 진짜 중복 가려내기) ──
 if (process.argv.includes('--judge') && conflicts.length) {
