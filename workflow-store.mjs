@@ -14,6 +14,15 @@ export function validName(name) {
   return typeof name === 'string' && /^[\w가-힣](?:[\w가-힣-]{0,38}[\w가-힣])?$/u.test(name) && !name.includes('..');
 }
 
+// 단계 구조 검증 — 저장은 유일한 '쓰기'라 깨진 단계를 막는다.
+// { capability: 문자열, skill: 문자열|null, note: 문자열|null }
+export function validStep(s) {
+  return !!s && typeof s === 'object'
+    && typeof s.capability === 'string'
+    && (s.skill == null || typeof s.skill === 'string')
+    && (s.note == null || typeof s.note === 'string');
+}
+
 // 사용자 파일은 스킬 폴더 밖 — 재설치(폴더 덮어쓰기)에도 안 날아간다.
 // 테스트는 SKILLSWEEP_HOME 으로 임시 디렉터리를 가리켜 실제 ~/.claude 를 안 건드린다.
 export function defaultUserFile() {
@@ -47,8 +56,10 @@ export function removeWorkflow(name, file = defaultUserFile()) {
 export function saveWorkflow(name, workflow, file = defaultUserFile()) {
   if (!validName(name)) return { ok: false, reason: 'invalid-name' };
   if (RESERVED.has(name)) return { ok: false, reason: 'reserved' };
+  const steps = (workflow && workflow.steps) || [];
+  if (!Array.isArray(steps) || !steps.every(validStep)) return { ok: false, reason: 'invalid-steps' };
   const list = loadUser(file);
-  const wf = { name, label: (workflow && workflow.label) || name, steps: (workflow && workflow.steps) || [] };
+  const wf = { name, label: (workflow && workflow.label) || name, steps };
   const idx = list.findIndex((w) => w.name === name);
   const overwritten = idx >= 0;
   if (overwritten) list[idx] = wf;
