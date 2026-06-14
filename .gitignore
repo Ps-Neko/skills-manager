@@ -10,3 +10,7 @@ GATE0.md
 node_modules/
 *.log
 .DS_Store
+
+# scan.mjs --json 임시 덤프 — 내 PC 스킬 목록·홈 경로가 들어있어 커밋 금지
+_inv.json
+_*.json
