@@ -97,7 +97,7 @@ Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 ### 표 제시 (list/run 공통)
 `--workflows`(또는 `--workflows --json`)의 각 단계 `resolved`를 **그대로 베끼지 말고 2단 판정**을 입혀 찍는다. scan의 `N곳`은 1단(넓게)이라 역할 다른 후보까지 센다.
 - 단계의 `resolved.skills`에 **판정 루브릭**(역할 분담=보존)을 적용해 "진짜 N곳"으로 보정한다. 예: 아이디어 단계 6곳이어도 캐묻기·상담·의도 캐기를 빼면 진짜 2곳 → `6곳 매칭(진짜 2곳) — superpowers·agent-skills 중 하나`. 코드 리뷰 4곳 → 받기·요청 빼고 진짜 2곳.
-- `kind:'none'`은 "기본 Claude로", `kind:'pinned'`은 고정 스킬(실종이면 `--get`의 `installed:false` 표시로 경고).
+- `kind:'none'`은 "기본 Claude로". `kind:'pinned'`은 사용자가 박은 고정 스킬 — **실종 여부는 `--workflows` 표/JSON엔 안 나온다**(그 경로는 installed를 안 따짐). 실행/제시 전 `--get <이름>`(워크플로우당 1회 호출)의 `installed:false`로 따로 확인해 실종 핀만 경고하라. `--workflows` 출력만 보고 "실종"을 단정하지 말 것.
 - **평한국어 규칙**(영어 스킬 이름 금지·출처 브랜드명/한국어 라벨만·이모지 금지·담백)을 똑같이 지킨다. capability 라벨은 `resolved.label` 그대로.
 
 ### 커스텀
