@@ -9,8 +9,9 @@ import path from 'node:path';
 export const RESERVED = new Set(['app-dev', 'bugfix', 'release-check', 'code-review', 'refactor']);
 
 // 이름: 영숫자·한글·하이픈·밑줄 1~40자, 경로 문자/`..` 금지.
+// 선두/말미 하이픈 금지(CLI 플래그 오인 방지) — 내부 하이픈은 허용.
 export function validName(name) {
-  return typeof name === 'string' && /^[\w가-힣-]{1,40}$/u.test(name) && !name.includes('..');
+  return typeof name === 'string' && /^[\w가-힣](?:[\w가-힣-]{0,38}[\w가-힣])?$/u.test(name) && !name.includes('..');
 }
 
 // 사용자 파일은 스킬 폴더 밖 — 재설치(폴더 덮어쓰기)에도 안 날아간다.
@@ -35,6 +36,7 @@ function writeUser(list, file) {
 }
 
 export function removeWorkflow(name, file = defaultUserFile()) {
+  if (!validName(name)) return { ok: false, reason: 'invalid-name' };
   const list = loadUser(file);
   const next = list.filter((w) => w.name !== name);
   if (next.length === list.length) return { ok: false, reason: 'not-found' };
