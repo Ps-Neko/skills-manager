@@ -9,8 +9,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps, CAP_LABEL } from './workflow-store.mjs';
-import { dispWidth, padW, shortKo, sortedConflicts, renderOverlaps, renderNextAction, renderInventoryLine, noSavedWorkflowBanner } from './render.mjs';
+import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps } from './workflow-store.mjs';
+import { scanInventory } from './scanner.mjs';
+import { capsOf, classify } from './classifier.mjs';
+import { buildHumanReport, buildJudgePacket } from './view-model.mjs';
+import { dispWidth, padW, renderReport, renderJudgePacket } from './render.mjs';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
@@ -82,94 +85,8 @@ if (!fs.existsSync(SKILLS) && !process.argv.includes('--workflows')) {
   process.exit(0);
 }
 
-// gstack 가 9개 surface 폴더에 사본을 미러 → 접어서 안 센다
-const SURFACE = new Set(['.cursor', '.factory', '.kiro', '.hermes', '.gbrain', '.slate', '.opencode', '.openclaw', '.agents']);
-const IGNORE = new Set(['.git', '.github', 'node_modules', '.skill-janitor-archive', '.skills-manager-archive', 'dist', 'bin']);
-
-let mirrorFiles = 0;
-
-const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } }; // statSync = 심링크 따라감
-
-function readFM(file) {
-  let t; try { t = fs.readFileSync(file, 'utf8'); } catch { return {}; }
-  const m = t.match(/^﻿?---\s*\r?\n([\s\S]*?)\r?\n---/);
-  if (!m) return {};
-  const fm = m[1];
-  const grab = (k) => (fm.match(new RegExp('^' + k + ':\\s*(.+)$', 'm')) || [])[1];
-  const clean = (s) => (s ? s.trim().replace(/^["']|["']$/g, '').trim() : '');
-  return { name: clean(grab('name')), description: clean(grab('description')) };
-}
-
-function countSkillMd(dir) {
-  let n = 0;
-  (function w(d) { let es; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { return; } for (const e of es) { if (e.isDirectory()) w(path.join(d, e.name)); else if (e.name === 'SKILL.md') n++; } })(dir);
-  return n;
-}
-
-// 심링크 대상 위치로 출처 라벨 추정
-function sourceFromLink(target) {
-  const t = target.replace(/\//g, '\\').toLowerCase();
-  if (t.includes('\\.agents\\')) return '.agents';
-  if (t.includes('\\skills\\gstack\\')) return 'gstack';
-  if (t.includes('\\.claude\\')) return 'user';
-  return '외부';
-}
-
-const items = []; // {name, source, desc}
-
-// (1) gstack 깊이1 이름(= 최상위에 평평히 깐 것의 원본). 번들/중첩 사본은 안 센다. 미러는 카운트만.
-const gstackDir = path.join(SKILLS, 'gstack');
-const gstackNames = new Set();
-if (fs.existsSync(gstackDir)) {
-  for (const e of fs.readdirSync(gstackDir, { withFileTypes: true })) {
-    if (!e.name.startsWith('.') && !IGNORE.has(e.name) && isDir(path.join(gstackDir, e.name)) && fs.existsSync(path.join(gstackDir, e.name, 'SKILL.md'))) gstackNames.add(e.name);
-  }
-  for (const s of SURFACE) { const d = path.join(gstackDir, s); if (fs.existsSync(d)) mirrorFiles += countSkillMd(d); }
-}
-
-// (2) 최상위 스킬 (심링크 포함). 출처: gstack 깐 것 / .agents 심링크 / 직접 독립
-for (const e of (fs.existsSync(SKILLS) ? fs.readdirSync(SKILLS, { withFileTypes: true }) : [])) {
-  if (e.name === 'gstack' || SURFACE.has(e.name) || IGNORE.has(e.name)) continue;
-  const full = path.join(SKILLS, e.name);
-  if (!isDir(full)) continue;                 // 심링크-디렉터리도 statSync로 true
-  const sk = path.join(full, 'SKILL.md');
-  if (!fs.existsSync(sk)) continue;
-  const fm = readFM(sk);
-  const nm = fm.name || e.name;
-  let source;
-  if (gstackNames.has(e.name)) source = 'gstack';
-  else if (e.isSymbolicLink()) { try { source = sourceFromLink(fs.readlinkSync(full)); } catch { source = 'user'; } }
-  else source = 'user';
-  items.push({ name: nm, source, desc: fm.description });
-}
-
-// (3) 플러그인 (installed_plugins.json 의 installPath = 진실원)
-const enabled = {};
-for (const f of ['settings.json', 'settings.local.json']) {
-  try { const j = JSON.parse(fs.readFileSync(path.join(CLAUDE, f), 'utf8')); Object.assign(enabled, j.enabledPlugins || {}); } catch {}
-}
-const plugins = [];
-try {
-  const ip = JSON.parse(fs.readFileSync(path.join(PLUGINS, 'installed_plugins.json'), 'utf8'));
-  for (const key of Object.keys(ip.plugins || {})) {
-    const short = key.split('@')[0];
-    const inst = ip.plugins[key]?.[0]?.installPath;
-    const pmap = new Map();
-    if (inst && fs.existsSync(inst)) {
-      (function collect(d) { let es; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { return; } for (const e of es) { if (e.isDirectory()) { if (SURFACE.has(e.name) || IGNORE.has(e.name)) continue; collect(path.join(d, e.name)); } else if (e.name === 'SKILL.md') { const fm = readFM(path.join(d, 'SKILL.md')); const nm = fm.name || path.basename(d); if (!pmap.has(nm)) pmap.set(nm, fm.description || ''); } } })(inst);
-    }
-    plugins.push({ key, short, enabled: enabled[key], count: pmap.size });
-    for (const [nm, d] of pmap) items.push({ name: nm, source: short, desc: d });
-  }
-} catch {}
-
-// (4) agents
-let agentCount = 0;
-try { agentCount = fs.readdirSync(AGENTS).filter(f => f.endsWith('.md')).length; } catch {}
-
-// dedupe
-const seen = new Set();
-const uniq = items.filter(it => { const k = it.source + '|' + it.name; if (seen.has(k)) return false; seen.add(k); return true; });
+// FS 인벤토리 수집은 scanner.mjs 가 담당 — scan.mjs 는 경로만 넘기고 결과를 받는다.
+const { uniq, plugins, agentCount, mirrorFiles } = scanInventory({ SKILLS, CLAUDE, PLUGINS, AGENTS });
 
 // --get <name>: 워크플로우 1건(내장+사용자)을 고정스킬 실종 표시와 함께 JSON 으로 — run 안내용.
 if (process.argv.includes('--get')) {
@@ -219,44 +136,8 @@ if (process.argv.includes('--set-skill')) {
   process.exit(0);
 }
 
-// 시드 키워드 표 (1단 — 넓게. 정밀 분리는 --judge 2단). 라벨은 CAP_LABEL 단일 출처에서.
-const GROUPS = [
-  { cap: 'tdd', label: CAP_LABEL.tdd, re: /(^|[-_])tdd($|[-_])|test-driven|red-green/i },
-  { cap: 'review', label: CAP_LABEL.review, re: /code-review|requesting-code|receiving-code|review-and-quality|^review$/i },
-  { cap: 'plan', label: CAP_LABEL.plan, re: /writing-plans|planning-and-task|task-breakdown|^plan$|^planning$/i },
-  { cap: 'debug', label: CAP_LABEL.debug, re: /debug|diagnose|investigate|error-recovery/i },
-  { cap: 'brainstorm', label: CAP_LABEL.brainstorm, re: /brainstorm|idea-refine|ideate|office-hours|interview-me|grill/i },
-  { cap: 'spec', label: CAP_LABEL.spec, re: /(^|[-_])spec($|[-_])|spec-driven/i },
-  { cap: 'ship', label: CAP_LABEL.ship, re: /(^|[-_])ship($|[-_])|deploy|launch|shipping/i },
-  { cap: 'security', label: CAP_LABEL.security, re: /security|hardening|(^|[-_])cso($|[-_])/i },
-  { cap: 'simplify', label: CAP_LABEL.simplify, re: /simplif/i },
-];
-
-// 설정·도우미·내부 항목은 "기능 중복"이 아니다 → 후보에서 제외 (2단 루브릭 #4의 기계화)
-const NOT_DUP = /^setup-|^_|-config$|configure/i;
-// 한 그룹의 후보 스킬 — conflicts(사람용/--judge)와 groups(--json/--workflows) 가 같은 식을 쓰게 단일화.
-const hitsForGroup = (g) => uniq.filter((it) => g.re.test(it.name) && !NOT_DUP.test(it.name));
-const conflicts = [];
-for (const g of GROUPS) {
-  const hits = hitsForGroup(g);
-  const sources = [...new Set(hits.map(h => h.source))];
-  if (hits.length >= 2 && sources.length >= 2) conflicts.push({ label: g.label, hits, sources });
-}
-// 출처별 "겹친 영역 커버 수" — 어느 묶음을 기본으로 둘지 정하는 근거(측정 가능한 사실)
-const cov = {};
-for (const c of conflicts) for (const s of c.sources) cov[s] = (cov[s] || 0) + 1;
-const covSorted = Object.entries(cov).sort((a, b) => b[1] - a[1]);
-
-// groups: capability→스킬 묶음(=--json 의 groups). --json 과 --workflows 가 공유.
-const groupsByCap = {};
-const groups = GROUPS.map((g) => {
-  const hits = hitsForGroup(g);
-  if (!hits.length) return null;
-  const sources = [...new Set(hits.map((h) => h.source))];
-  const entry = { capability: g.cap, label: g.label, skills: hits.map((h) => h.source + ':' + h.name), sources, duplicateLevel: sources.length >= 2 ? 'high' : 'none' };
-  groupsByCap[g.cap] = entry;
-  return entry;
-}).filter(Boolean);
+// 분류(capability 판정 + 충돌/그룹)는 classifier.mjs(순수)가 담당 — scan.mjs 는 인벤토리만 넘긴다.
+const { conflicts, cov, covSorted, groups, groupsByCap } = classify(uniq);
 
 // --workflows: 워크플로우 목록 + 각 단계의 쓸 스킬(인벤토리로 해소). 인벤토리·groups 뒤라야 함.
 if (process.argv.includes('--workflows')) {
@@ -294,7 +175,6 @@ if (process.argv.includes('--workflows')) {
 // ── --json: 구조화된 스킬 인벤토리 (추천기·워크플로우의 기반) ──
 if (process.argv.includes('--json')) {
   const penabled = Object.fromEntries(plugins.map(p => [p.short, p.enabled !== false]));
-  const capsOf = (name) => GROUPS.filter(g => g.re.test(name) && !NOT_DUP.test(name)).map(g => g.cap);
   const bySrc = {}; for (const it of uniq) bySrc[it.source] = (bySrc[it.source] || 0) + 1;
   const out = {
     version: '0.2.0',
@@ -315,47 +195,14 @@ if (process.argv.includes('--json')) {
   process.exit(0);
 }
 
-// ---- 출력 (기본 = 사람용 접힘 / --all·--judge = 전체 / --judge 는 판정 패킷도) ----
-const SRC_KO = { gstack: 'gstack', '.agents': '.agents(심링크)', user: '직접 설치', 'agent-skills': 'agent-skills', superpowers: 'superpowers', codex: 'codex', harness: 'harness', '외부': '외부 링크' };
+// ---- 출력 ---- 출력 정책(무엇을 보여줄지)은 view-model 이, 문자열 변환은 render 가. scan 은 조립·출력만.
 const isJudge = process.argv.includes('--judge');
 const full = process.argv.includes('--all') || isJudge;          // 전체 벽(상세) 표시 여부
 const by = {}; for (const it of uniq) by[it.source] = (by[it.source] || 0) + 1;
 const noSavedFlows = !full && loadUser().length === 0;           // 저장된 '내 흐름' 0개 ('첫 실행'이 아니라 이 상태일 때 안내)
 
-if (noSavedFlows) console.log('\n' + noSavedWorkflowBanner());
-console.log('\nSkills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)');
+const report = buildHumanReport({ uniqCount: uniq.length, conflicts, by, mirrorFiles, covSorted, full, noSavedFlows });
+console.log('\n' + renderReport(report) + '\n');
 
-// 한 줄 결론 — 항상(겹침 유무 무관). 여백으로 격리해 첫 시선이 여기 걸리게. 스킬 수도 여기 담아 인벤토리 줄과 중복 없앰.
-const conclusion = conflicts.length
-  ? `스킬 ${uniq.length}개 중 같은 일이 ${conflicts.length}가지 겹침. 끌 건 없고, 자주 하는 작업을 '내 흐름'으로 저장하면 됨.`
-  : `스킬 ${uniq.length}개, 같은 일이 겹친 곳 없음. 깔끔함.`;
-console.log('\n  ' + conclusion);
-
-// 접힘(기본)에선 세로 겹침 목록을 안 찍는다 — 겹침 띠는 LLM(verdict)이 보정 박힌 한 줄로 한 번만 적어
-// 기계↔글이 같은 숫자를 두 번 말하던 중복을 없앤다. --all/--judge(full) 에서만 기계가 세로 목록을 보여준다(전체 진단·회귀 잠금).
-if (full && conflicts.length) console.log('\n' + renderOverlaps(conflicts, { full }));
-
-if (full) {
-  console.log('\n' + renderInventoryLine(uniq.length, by, mirrorFiles, { full: true }));
-  if (conflicts.length) {
-    console.log(`\n기본으로 둘 묶음 (겹친 ${conflicts.length}가지 중 몇에 끼나):`);
-    console.log(`  ${covSorted.map(([s, n]) => `${shortKo(s)} ${n}`).join(' · ')}`);
-    console.log(`  → ${shortKo(covSorted[0][0])}가 가장 많음. 기본으로 두면 편함 (단, 묶음마다 고유 스킬도 있으니 본인 몫).`);
-    console.log(`\n끄기는 거의 안 됨 — 겹친 게 플러그인 안이고, 플러그인은 통째로만 꺼져서 하나 빼려다 고유한 것까지 잃음. 그래서 보여주는 데까지만.`);
-  }
-}
-// 접힘 모드: 인벤토리 줄을 안 찍는다 — 스킬 수는 결론에 이미 있고, 전체 보기 진입점은 '다음 한 수'의 --all 줄이 책임진다.
-
-console.log('\n' + renderNextAction(conflicts));
-console.log('');
-
-// ── 2단 판정 패킷 (LLM이 설명 읽고 진짜 중복 가려내기) ──
-if (process.argv.includes('--judge') && conflicts.length) {
-  const cut = (s) => (s || '(설명 없음)').replace(/\s+/g, ' ').slice(0, 90);
-  console.log('────── 판정 패킷 (2단: 설명 읽고 진짜 중복 가려내기) ──────\n');
-  for (const c of conflicts) {
-    console.log(`[${c.label}]`);
-    for (const h of c.hits) console.log(`  - ${h.name} (${SRC_KO[h.source] || h.source}): ${cut(h.desc)}`);
-    console.log('');
-  }
-}
+const packet = buildJudgePacket({ conflicts, isJudge });
+if (packet) console.log(renderJudgePacket(packet));

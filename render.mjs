@@ -62,3 +62,51 @@ export function noSavedWorkflowBanner() {
     "아래는 지금 깔린 것의 지도입니다. 끝에 '다음 한 수'가 있어요.",
   ].join('\n');
 }
+
+// 한 줄 결론 — 항상. 스킬 수도 여기 담아 인벤토리 줄과 중복 없앰.
+export function renderConclusion(uniqCount, conflictCount) {
+  return conflictCount
+    ? `스킬 ${uniqCount}개 중 같은 일이 ${conflictCount}가지 겹침. 끌 건 없고, 자주 하는 작업을 '내 흐름'으로 저장하면 됨.`
+    : `스킬 ${uniqCount}개, 같은 일이 겹친 곳 없음. 깔끔함.`;
+}
+
+// '기본으로 둘 묶음' + 끄기 설명 (--all/--judge 의 full 블록에서만).
+function renderCoverage(conflictCount, covSorted) {
+  return [
+    `기본으로 둘 묶음 (겹친 ${conflictCount}가지 중 몇에 끼나):`,
+    `  ${covSorted.map(([s, n]) => `${shortKo(s)} ${n}`).join(' · ')}`,
+    `  → ${shortKo(covSorted[0][0])}가 가장 많음. 기본으로 두면 편함 (단, 묶음마다 고유 스킬도 있으니 본인 몫).`,
+    `\n끄기는 거의 안 됨 — 겹친 게 플러그인 안이고, 플러그인은 통째로만 꺼져서 하나 빼려다 고유한 것까지 잃음. 그래서 보여주는 데까지만.`,
+  ].join('\n');
+}
+
+// 출처 → 사람용 라벨(판정 패킷용).
+const SRC_KO = { gstack: 'gstack', '.agents': '.agents(심링크)', user: '직접 설치', 'agent-skills': 'agent-skills', superpowers: 'superpowers', codex: 'codex', harness: 'harness', '외부': '외부 링크' };
+
+// 사람용 검사 결과 조립 — view-model 이 정한 sections 모델을 문자열로 변환만 한다(무엇을 보여줄지 판단은 view-model).
+export function renderReport({ sections }) {
+  const TITLE = 'Skills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)';
+  const blocks = [];
+  for (const s of sections) {
+    if (s.kind === 'banner') blocks.push(noSavedWorkflowBanner());
+    else if (s.kind === 'title') blocks.push(TITLE);
+    else if (s.kind === 'conclusion') blocks.push('  ' + renderConclusion(s.uniqCount, s.conflictCount));
+    else if (s.kind === 'overlaps') blocks.push(renderOverlaps(s.conflicts, { full: true }));
+    else if (s.kind === 'inventory') blocks.push(renderInventoryLine(s.uniqCount, s.by, s.mirrorFiles, { full: true }));
+    else if (s.kind === 'coverage') blocks.push(renderCoverage(s.conflictCount, s.covSorted));
+    else if (s.kind === 'nextAction') blocks.push(renderNextAction(s.conflicts));
+  }
+  return blocks.join('\n\n');
+}
+
+// 2단 판정 패킷 — buildJudgePacket 이 준 모델을 문자열로.
+export function renderJudgePacket({ conflicts }) {
+  const cut = (s) => (s || '(설명 없음)').replace(/\s+/g, ' ').slice(0, 90);
+  const out = ['────── 판정 패킷 (2단: 설명 읽고 진짜 중복 가려내기) ──────', ''];
+  for (const c of conflicts) {
+    out.push(`[${c.label}]`);
+    for (const h of c.hits) out.push(`  - ${h.name} (${SRC_KO[h.source] || h.source}): ${cut(h.desc)}`);
+    out.push('');
+  }
+  return out.join('\n');
+}
