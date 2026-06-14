@@ -34,6 +34,14 @@ function writeUser(list, file) {
   fs.writeFileSync(file, JSON.stringify({ version: 1, workflows: list }, null, 2));
 }
 
+export function removeWorkflow(name, file = defaultUserFile()) {
+  const list = loadUser(file);
+  const next = list.filter((w) => w.name !== name);
+  if (next.length === list.length) return { ok: false, reason: 'not-found' };
+  writeUser(next, file);
+  return { ok: true };
+}
+
 export function saveWorkflow(name, workflow, file = defaultUserFile()) {
   if (!validName(name)) return { ok: false, reason: 'invalid-name' };
   if (RESERVED.has(name)) return { ok: false, reason: 'reserved' };
