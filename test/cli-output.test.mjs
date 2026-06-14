@@ -17,6 +17,20 @@ function fixtureHome(skillName = 'solo-skill') {
   fs.writeFileSync(path.join(skillDir, 'SKILL.md'), `---\nname: ${skillName}\ndescription: 테스트용 단일 스킬\n---\n`);
   return home;
 }
+// 충돌 1개(TDD 그룹)를 결정적으로 만든다: 최상위 tdd(출처 user) + gstack/test-driven-development(출처 gstack).
+// gstack 출처로 인식되려면 gstack/<name> 원본 + 최상위 평면 사본이 둘 다 있어야 함(스캔의 평면화 모델).
+function conflictHome() {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-home-'));
+  const mk = (rel, name) => {
+    const d = path.join(home, '.claude', 'skills', ...rel);
+    fs.mkdirSync(d, { recursive: true });
+    fs.writeFileSync(path.join(d, 'SKILL.md'), `---\nname: ${name}\ndescription: 테스트용 ${name}\n---\n`);
+  };
+  mk(['tdd'], 'tdd');                                                      // 출처 user
+  mk(['gstack', 'test-driven-development'], 'test-driven-development');     // gstack 원본
+  mk(['test-driven-development'], 'test-driven-development');               // 최상위 평면 사본 → 출처 gstack
+  return home;
+}
 function run(args, { home, smHome }) {
   return execFileSync(process.execPath, [SCAN, ...args], {
     input: '', encoding: 'utf8',
@@ -24,14 +38,33 @@ function run(args, { home, smHome }) {
   });
 }
 
-test('기본 출력: 한 줄 결론 + 다음 한 수, 묶음별 분포는 숨김(접힘)', () => {
+test('기본 출력(겹침 0): 결론 한 줄 + 다음 한 수, 인벤토리 줄·상세 분포는 숨김(접힘)', () => {
   const home = fixtureHome();
   const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-sm-'));
   const out = run([], { home, smHome });
-  assert.match(out, /한 줄:/);
+  assert.match(out, /스킬 1개, 같은 일이 겹친 곳 없음\. 깔끔함\./); // 결론이 스킬 수까지 안음
+  assert.ok(!out.includes('한 줄:'), "'한 줄:' 라벨은 떼고 문장만");
   assert.match(out, /다음 한 수:/);
-  assert.match(out, /깔린 스킬 약 1개\./);     // 접힌 한 줄
+  assert.ok(!/깔린 스킬 약 1개\./.test(out), '인벤토리 줄은 접힘에서 안 보임(--all 로)');
   assert.ok(!/도구용 사본 \d+벌 접음/.test(out), '접힘은 상세 분포를 숨김');
+});
+
+test('기본 출력(겹침 있음): 세로 겹침 목록을 안 찍는다(띠는 LLM 몫) + 결론에 가짓수 + --all 안내', () => {
+  const home = conflictHome();
+  const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-sm-'));
+  const out = run([], { home, smHome });
+  assert.match(out, /같은 일이 1가지 겹침/);                   // 결론엔 가짓수
+  assert.ok(!/같은 일이 겹친 곳 —/.test(out), '접힘은 세로 목록 머리글을 안 찍음');
+  assert.ok(!/· 테스트 먼저 짜기 \(TDD\) — 2곳/.test(out), '세로 목록 줄도 없음');
+  assert.match(out, /node scan\.mjs --all/);                   // 전체 진입점은 다음 한 수에
+});
+
+test('--all(겹침 있음): 세로 겹침 목록을 보여준다(전체 진단 보존)', () => {
+  const home = conflictHome();
+  const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-sm-'));
+  const out = run(['--all'], { home, smHome });
+  assert.match(out, /같은 일이 겹친 곳 —/);
+  assert.match(out, /테스트 먼저 짜기 \(TDD\) — 2곳/);
 });
 
 test('--all: 묶음별 분포 상세를 보여준다', () => {
