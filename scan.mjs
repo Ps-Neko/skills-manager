@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing } from './workflow-store.mjs';
+import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill } from './workflow-store.mjs';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
@@ -39,7 +39,7 @@ if (process.argv.includes('--workflows')) {
       const tag = w.source === 'user' ? '내 것 ' : '내장  ';
       console.log(`  · [${tag}] ${w.name.padEnd(14)} ${w.label}   [${w.steps.map(s => s.capability).join(' → ')}]`);
     }
-    console.log('\n사용: /skillsweep workflow <name> (실행 안내) · workflow save <name> (저장) · workflow delete <name>\n');
+    console.log('\n사용: /skillsweep workflow <name> (실행) · save <name> · set-skill <name> --step N --skill <id|none> · delete <name>\n');
   }
   process.exit(0);
 }
@@ -189,6 +189,39 @@ if (process.argv.includes('--get')) {
   if (!found) { console.log(JSON.stringify({ error: 'not-found', name })); process.exit(1); }
   const installedIds = uniq.map((it) => it.source + ':' + it.name);
   console.log(JSON.stringify(annotateMissing(found, installedIds), null, 2));
+  process.exit(0);
+}
+
+// --set-skill <name> --step <n> --skill <id|none>: 내 흐름의 한 단계 스킬 핀만 교체/비우기.
+if (process.argv.includes('--set-skill')) {
+  const name = requireArg('--set-skill');
+  const usage = '사용법: --set-skill <흐름이름> --step <번호(1부터)> --skill <스킬id | none>  (비우려면 --skill none)';
+  const stepRaw = process.argv.includes('--step') ? argAfter('--step') : undefined;
+  const stepNum = Number(stepRaw);
+  if (stepRaw === undefined || stepRaw.startsWith('--') || !Number.isInteger(stepNum) || stepNum < 1) {
+    console.log(usage); process.exit(1);
+  }
+  const skillRaw = process.argv.includes('--skill') ? argAfter('--skill') : undefined;
+  if (skillRaw === undefined || skillRaw.startsWith('--')) {
+    console.log(usage); process.exit(1);
+  }
+  const skillId = (skillRaw === 'none' || skillRaw === 'null' || skillRaw === '') ? null : skillRaw;
+  const installedIds = uniq.map((it) => it.source + ':' + it.name);
+  if (skillId !== null && !installedIds.includes(skillId)) {
+    console.log(`주의: '${skillId}'는 지금 안 깔린 스킬이에요. 그래도 박았어요(실행 때 '실종'으로 보일 수 있음).`);
+  }
+  const res = setStepSkill(name, stepNum, skillId);
+  if (!res.ok) {
+    const why = {
+      'invalid-name': '이름이 올바르지 않아요(영숫자·한글·-·_ 1~40자).',
+      'reserved': "내장 템플릿은 못 고쳐요. 먼저 'save'로 내 흐름으로 복제한 뒤 고치세요.",
+      'not-found': `내 워크플로우에 없어요: ${name} (내장은 'workflow list'에서 확인 — 고치려면 먼저 복제).`,
+      'bad-step': `단계 번호가 범위를 벗어났어요: ${stepNum} (이 흐름은 1~${res.stepCount}단계).`,
+    }[res.reason] || res.reason;
+    console.log(`수정 실패: ${why}`);
+    process.exit(1);
+  }
+  console.log(`고쳤어요: ${name}의 ${stepNum}단계(${res.capability}) 스킬을 '${res.skill ?? '비움'}'로 설정.`);
   process.exit(0);
 }
 
