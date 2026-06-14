@@ -34,9 +34,12 @@ Claude Code랑 Cursor에 스킬을 계속 깔다 보니, 어느 순간부터 문
 ```
 ~/.claude/skills/skills-manager/
    ├─ SKILL.md
-   └─ scan.mjs
+   ├─ scan.mjs
+   ├─ render.mjs           # scan.mjs 가 import — 빠지면 실행 시 깨짐
+   ├─ workflow-store.mjs   # 워크플로우 저장/조회 — scan.mjs 가 import
+   └─ workflows.json       # 내장 워크플로우 템플릿
 ```
-또는 clone 후 복사:
+**다섯 파일을 함께** 두어야 합니다(`scan.mjs` 단독으로는 안 돕니다). 또는 clone 후 폴더째 복사:
 ```
 git clone https://github.com/Ps-Neko/skills-manager.git
 ```

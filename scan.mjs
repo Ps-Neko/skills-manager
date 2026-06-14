@@ -10,7 +10,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps, CAP_LABEL } from './workflow-store.mjs';
-import { dispWidth, padW, shortKo, sortedConflicts, renderOverlaps, renderNextAction, renderInventoryLine, firstRunBanner } from './render.mjs';
+import { dispWidth, padW, shortKo, sortedConflicts, renderOverlaps, renderNextAction, renderInventoryLine, noSavedWorkflowBanner } from './render.mjs';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
@@ -320,9 +320,9 @@ const SRC_KO = { gstack: 'gstack', '.agents': '.agents(심링크)', user: '직�
 const isJudge = process.argv.includes('--judge');
 const full = process.argv.includes('--all') || isJudge;          // 전체 벽(상세) 표시 여부
 const by = {}; for (const it of uniq) by[it.source] = (by[it.source] || 0) + 1;
-const firstRun = !full && loadUser().length === 0;               // 저장된 흐름 0개 = 처음 쓰는 사람(읽기 전용 추정)
+const noSavedFlows = !full && loadUser().length === 0;           // 저장된 '내 흐름' 0개 ('첫 실행'이 아니라 이 상태일 때 안내)
 
-if (firstRun) console.log('\n' + firstRunBanner());
+if (noSavedFlows) console.log('\n' + noSavedWorkflowBanner());
 console.log('\nSkills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)');
 
 // 한 줄 결론 — 항상(겹침 유무 무관). 여백으로 격리해 첫 시선이 여기 걸리게. 스킬 수도 여기 담아 인벤토리 줄과 중복 없앰.

@@ -74,14 +74,15 @@ test('--all: 묶음별 분포 상세를 보여준다', () => {
   assert.match(out, /도구용 사본 \d+벌 접음/);  // full 상세
 });
 
-test('첫 실행(저장된 흐름 0개): 환영 배너가 분석 위에 한 번', () => {
+test('저장 흐름 0개: "저장한 흐름 없음" 안내가 분석 위에 한 번', () => {
   const home = fixtureHome();
-  const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-sm-')); // 빈 SM_HOME → loadUser []=첫 실행
+  const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-sm-')); // 빈 SM_HOME → loadUser []=저장 흐름 0개
   const out = run([], { home, smHome });
-  assert.match(out, /처음 오셨네요/);
+  assert.match(out, /저장한 '내 흐름'이 없어요/);
+  assert.ok(!out.includes('처음 오셨네요'), '"첫 실행" 문구는 부정확이라 안 씀');
 });
 
-test('둘째 실행(흐름 저장됨): 환영 배너 사라짐', () => {
+test('흐름 저장 후: 안내 사라짐', () => {
   const home = fixtureHome();
   const smHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-sm-'));
   execFileSync(process.execPath, [SCAN, '--save', 'mine'], {
@@ -89,7 +90,7 @@ test('둘째 실행(흐름 저장됨): 환영 배너 사라짐', () => {
     encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home, SKILLS_MANAGER_HOME: smHome },
   });
   const out = run([], { home, smHome });
-  assert.ok(!out.includes('처음 오셨네요'), '저장 후엔 배너 없음');
+  assert.ok(!out.includes("저장한 '내 흐름'이 없어요"), '저장 후엔 안내 없음');
 });
 
 test('--save 빈 stdin: 사용법 + 예시 + 저장된 흐름 목록으로 안내', () => {

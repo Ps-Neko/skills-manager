@@ -52,12 +52,13 @@ export function renderInventoryLine(uniqCount, by, mirrorFiles, { full = false }
   return `깔린 스킬: 약 ${uniqCount}개 (도구용 사본 ${mirrorFiles}벌 접음)\n  ${dist}`;
 }
 
-// 첫 실행(저장된 흐름 0개) 일회성 안내. 사실 진술만 — 과한 안심·유치체 금지.
-export function firstRunBanner() {
+// 저장된 '내 흐름'이 0개일 때 뜨는 안내. '첫 실행'이 아니라 '저장 흐름 없음' 상태다(흐름을 지우면 다시 뜸).
+// 사실 진술만 — 과한 안심·유치체 금지.
+export function noSavedWorkflowBanner() {
   return [
-    'Skills Manager에 처음 오셨네요.',
+    "아직 저장한 '내 흐름'이 없어요. (워크플로우를 저장하면 이 안내는 사라집니다.)",
     '하는 일: 깔린 스킬이 많거나 같은 일이 여기저기 겹칠 때, 무엇이 겹쳤는지 지도로 보여주고',
     "         자주 하는 작업을 '내 흐름'으로 저장하게 해 줍니다. 스킬을 끄거나 지우진 않아요(읽기 전용).",
-    "아래는 지금 깔린 것의 첫 지도입니다. 끝에 '다음 한 수'가 있어요.",
+    "아래는 지금 깔린 것의 지도입니다. 끝에 '다음 한 수'가 있어요.",
   ].join('\n');
 }
