@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { saveWorkflow, loadUser, validName, RESERVED } from '../workflow-store.mjs';
+import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow } from '../workflow-store.mjs';
 
 function tmpFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-'));
@@ -54,4 +54,28 @@ test('saving an existing name overwrites and flags it', () => {
   const loaded = loadUser(file);
   assert.strictEqual(loaded.length, 1);
   assert.strictEqual(loaded[0].label, 'B');
+});
+
+test('remove deletes a saved workflow', () => {
+  const file = tmpFile();
+  saveWorkflow('gone', { steps: [] }, file);
+  assert.strictEqual(removeWorkflow('gone', file).ok, true);
+  assert.deepStrictEqual(loadUser(file), []);
+});
+
+test('removing a missing name reports not-found', () => {
+  const file = tmpFile();
+  const res = removeWorkflow('nope', file);
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.reason, 'not-found');
+});
+
+test('a corrupt user file loads as [] and does not crash on save', () => {
+  const file = tmpFile();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, '{ this is not json');
+  assert.deepStrictEqual(loadUser(file), []);
+  const res = saveWorkflow('after-corrupt', { steps: [] }, file);
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(loadUser(file).length, 1); // 손상 내용 위에 안전하게 새로 씀
 });
