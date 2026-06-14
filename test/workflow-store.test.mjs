@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow } from '../workflow-store.mjs';
+import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow, annotateMissing, listAll } from '../workflow-store.mjs';
 
 function tmpFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-'));
@@ -78,4 +78,22 @@ test('a corrupt user file loads as [] and does not crash on save', () => {
   const res = saveWorkflow('after-corrupt', { steps: [] }, file);
   assert.strictEqual(res.ok, true);
   assert.strictEqual(loadUser(file).length, 1); // 손상 내용 위에 안전하게 새로 씀
+});
+
+test('annotateMissing flags installed vs missing vs null', () => {
+  const wf = { name: 'w', steps: [
+    { capability: 'tdd', skill: 'agent-skills:test-driven-development' },
+    { capability: 'review', skill: 'gone:old-skill' },
+    { capability: 'implement', skill: null },
+  ] };
+  const out = annotateMissing(wf, ['agent-skills:test-driven-development', 'gstack:review']);
+  assert.strictEqual(out.steps[0].installed, true);
+  assert.strictEqual(out.steps[1].installed, false);
+  assert.strictEqual(out.steps[2].installed, null);
+});
+
+test('listAll merges builtin + user with source labels', () => {
+  const merged = listAll([{ name: 'app-dev', steps: [] }], [{ name: 'mine', steps: [] }]);
+  assert.strictEqual(merged.find((w) => w.name === 'app-dev').source, 'builtin');
+  assert.strictEqual(merged.find((w) => w.name === 'mine').source, 'user');
 });

@@ -54,3 +54,23 @@ export function saveWorkflow(name, workflow, file = defaultUserFile()) {
   writeUser(list, file);
   return { ok: true, overwritten };
 }
+
+// 각 단계의 고정 스킬이 지금도 깔려 있나 표시(run/get 에서 사용).
+export function annotateMissing(workflow, installedIds) {
+  const set = new Set(installedIds);
+  return {
+    ...workflow,
+    steps: (workflow.steps || []).map((s) => ({
+      ...s,
+      installed: s.skill == null ? null : set.has(s.skill),
+    })),
+  };
+}
+
+// 내장 + 사용자 목록 병합(출처 표시).
+export function listAll(builtin, user) {
+  return [
+    ...builtin.map((w) => ({ ...w, source: 'builtin' })),
+    ...user.map((w) => ({ ...w, source: 'user' })),
+  ];
+}
