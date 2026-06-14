@@ -331,7 +331,8 @@ const conclusion = conflicts.length
   : `한 줄: 스킬 ${uniq.length}개, 같은 일이 겹친 곳 없음. 깔끔함.`;
 console.log('\n  ' + conclusion + '\n');
 
-console.log(renderOverlaps(conflicts, { full }));
+// 겹침이 있을 때만 목록을 찍는다 — 0개면 위 한 줄 결론의 '깔끔함'이 이미 같은 말이라 중복 회피.
+if (conflicts.length) console.log(renderOverlaps(conflicts, { full }));
 
 if (full) {
   console.log('\n' + renderInventoryLine(uniq.length, by, mirrorFiles, { full: true }));
