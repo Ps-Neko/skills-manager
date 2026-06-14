@@ -188,6 +188,20 @@ test('--workflows(글자) 는 단계별 쓸 스킬 표를 찍는다', () => {
   assert.match(out, /app-dev/);
 });
 
+test('--workflows --json: 사용자 흐름 단계의 note/skill/source 가 보존된다(스프레드 회귀 잠금)', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  const wf = JSON.stringify({ label: '내 흐름', steps: [
+    { capability: 'ship', skill: 'gstack:ship', note: '배포 전 마지막 점검' },
+  ] });
+  run(['--save', 'mine'], { input: wf, home });
+  const j = JSON.parse(run(['--workflows', '--json'], { home }));
+  const mine = j.workflows.find((w) => w.name === 'mine');
+  assert.strictEqual(mine.source, 'user');
+  assert.strictEqual(mine.steps[0].note, '배포 전 마지막 점검', 'note 보존');
+  assert.strictEqual(mine.steps[0].skill, 'gstack:ship', 'skill(핀) 보존');
+  assert.strictEqual(mine.steps[0].resolved.kind, 'pinned');
+});
+
 test('--workflows(글자): 스킬 폴더 없는 환경도 안 죽고, 단계 라벨이 한국어다(영어 cap 노출 금지)', () => {
   // USERPROFILE/HOME 를 빈 임시폴더로 → os.homedir() 가 그쪽을 보게 해 no-skills 경로 강제.
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-nohome-'));

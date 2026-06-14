@@ -228,9 +228,11 @@ const GROUPS = [
 
 // 설정·도우미·내부 항목은 "기능 중복"이 아니다 → 후보에서 제외 (2단 루브릭 #4의 기계화)
 const NOT_DUP = /^setup-|^_|-config$|configure/i;
+// 한 그룹의 후보 스킬 — conflicts(사람용/--judge)와 groups(--json/--workflows) 가 같은 식을 쓰게 단일화.
+const hitsForGroup = (g) => uniq.filter((it) => g.re.test(it.name) && !NOT_DUP.test(it.name));
 const conflicts = [];
 for (const g of GROUPS) {
-  const hits = uniq.filter(it => g.re.test(it.name) && !NOT_DUP.test(it.name));
+  const hits = hitsForGroup(g);
   const sources = [...new Set(hits.map(h => h.source))];
   if (hits.length >= 2 && sources.length >= 2) conflicts.push({ label: g.label, hits, sources });
 }
@@ -242,7 +244,7 @@ const covSorted = Object.entries(cov).sort((a, b) => b[1] - a[1]);
 // groups: capability→스킬 묶음(=--json 의 groups). --json 과 --workflows 가 공유.
 const groupsByCap = {};
 const groups = GROUPS.map((g) => {
-  const hits = uniq.filter((it) => g.re.test(it.name) && !NOT_DUP.test(it.name));
+  const hits = hitsForGroup(g);
   if (!hits.length) return null;
   const sources = [...new Set(hits.map((h) => h.source))];
   const entry = { capability: g.cap, label: g.label, skills: hits.map((h) => h.source + ':' + h.name), sources, duplicateLevel: sources.length >= 2 ? 'high' : 'none' };
