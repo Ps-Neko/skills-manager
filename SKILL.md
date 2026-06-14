@@ -87,8 +87,24 @@ skillsweep recommend의 가치는 **호스트가 구조상 못 하는 것**:
 ### 커스텀
 사용자가 `workflows.json`에 항목을 추가/수정하면 새 흐름이 생긴다. capability는 scan의 cap(tdd·review·plan·debug·brainstorm·spec·ship·security·simplify)이면 자동 해소, 그 외(implement 등)는 "기본 Claude로" 표기.
 
+### 저장 (save) — `/skillsweep workflow save <이름>`
+1. 저장할 흐름을 확보: (a) 직전 `recommend`/`workflow <name>` 결과를 쓰거나, (b) 사용자와 단계를 정한다.
+2. 중복(여러 출처) 단계는 사용자에게 **하나를 고르게** 해 고정한다(`"출처:이름"`). 못 고르거나 없으면 `skill: null`.
+3. 완성한 워크플로우 JSON을 `node scan.mjs --save "<이름>"` 의 stdin 으로 넘긴다(형식: `{ "label": "...", "steps": [{ "capability": "...", "skill": "출처:이름"|null, "note": "" }] }`).
+4. 결과 문구(저장/덮어씀/실패 사유)를 평한국어로 그대로 전한다.
+
+### 실행 (run) — `/skillsweep workflow <이름>` 또는 `workflow run <이름>`
+1. `node scan.mjs --get "<이름>"` 으로 워크플로우(고정스킬 `installed` 표시 포함)를 읽는다. `not-found` 면 `--workflows` 목록을 보여주고 되묻는다.
+2. 단계별로 안내한다: 각 단계의 capability + 고정 스킬을 "이 단계엔 이거 쓰세요"로. `skill:null`/cap 없음은 "기본 Claude로".
+3. **이번엔 다른 거**: 사용자가 바꾸려 하면 그 capability의 중복 후보(`scan.mjs --json` groups)를 보여주고 **이번 실행만** 교체한다. 저장본은 사용자가 "이걸로 바꿔 저장"이라 해야 `save`로 갱신.
+4. **고정 스킬 실종**(`installed:false`): "이 단계에 고정했던 X가 지금 안 보여요" + 그 capability의 현재 후보를 제시해 다시 고르게 한다. 절대 멈추지 말 것.
+5. skillsweep는 **조언만** 한다 — 실제 작업은 호스트가. 스킬을 자동 실행하지 않는다.
+
+### 삭제 (delete) — `/skillsweep workflow delete <이름>`
+`node scan.mjs --delete "<이름>"`. 내 워크플로우만 지워진다(내장 템플릿은 못 지움 — 그대로 안내). 지우기 전 한 번 확인.
+
 ### 경계
-읽기 전용 — 흐름·추천만. 실행·끄기 없음.
+읽기 전용 — 흐름·추천·실행 안내만. **쓰기는 오직 내가 저장한 워크플로우 파일(`~/.claude/skillsweep-workflows.json`) 한 곳뿐** — settings.json·스킬 폴더·다른 스킬은 절대 안 건드린다(스킬 끄기 없음). 실제 작업 실행도 없음(조언자).
 
 ## 경계
 - slice1 = 읽기 전용. settings.json·스킬 폴더를 **건드리지 않는다**.
