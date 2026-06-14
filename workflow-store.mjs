@@ -105,3 +105,31 @@ export function setStepSkill(name, stepIndex, skillId, file = defaultUserFile())
   writeUser(list, file);
   return { ok: true, capability: step.capability, skill: step.skill };
 }
+
+// 비-그룹 capability(implement·clarify 등)의 표 라벨. 그룹 cap 은 groups 의 label 을 쓴다.
+export const CAP_LABEL = {
+  implement: '구현',
+  clarify: '요구 확인',
+};
+
+// 각 단계의 capability 를 인벤토리 그룹 지도로 해소(1단, 넓게·결정적).
+// groupsByCap: { [capability]: { label, skills:[id], sources:[src] } } — scan --json 의 groups 에서 구성.
+// 반환: 각 step + resolved {kind, label, skills, sources, count}.
+// 판정 보정(역할 다른 건 빼서 '진짜 N곳')은 LLM 제시 층의 일 — 여기선 넓은 값만.
+export function resolveSteps(workflow, groupsByCap = {}) {
+  return (workflow.steps || []).map((s) => {
+    const cap = s.capability;
+    const g = groupsByCap[cap];
+    const label = (g && g.label) || CAP_LABEL[cap] || cap;
+    if (s.skill) {
+      const src = String(s.skill).split(':')[0];
+      return { ...s, resolved: { kind: 'pinned', label, skills: [s.skill], sources: [src], count: 1 } };
+    }
+    if (!g || !Array.isArray(g.skills) || g.skills.length === 0) {
+      return { ...s, resolved: { kind: 'none', label, skills: [], sources: [], count: 0 } };
+    }
+    const sources = g.sources || [...new Set(g.skills.map((id) => id.split(':')[0]))];
+    const kind = sources.length >= 2 ? 'multi' : 'single';
+    return { ...s, resolved: { kind, label, skills: g.skills, sources, count: g.skills.length } };
+  });
+}

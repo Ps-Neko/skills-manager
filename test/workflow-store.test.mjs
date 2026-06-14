@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow, annotateMissing, listAll, validStep, setStepSkill } from '../workflow-store.mjs';
+import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow, annotateMissing, listAll, validStep, setStepSkill, resolveSteps } from '../workflow-store.mjs';
 
 function tmpFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-'));
@@ -185,4 +185,45 @@ test('setStepSkill rejects out-of-range or non-integer step and reports stepCoun
   assert.strictEqual(setStepSkill('mine', 3, 'a:b', file).reason, 'bad-step');
   assert.strictEqual(setStepSkill('mine', 1.5, 'a:b', file).reason, 'bad-step');
   assert.strictEqual(setStepSkill('mine', 3, 'a:b', file).stepCount, 2);
+});
+
+// ── resolveSteps: 단계 capability 를 인벤토리 그룹 지도로 해소(순수·환경 독립) ──
+const GBC = {
+  tdd: { label: '테스트 먼저 짜기 (TDD)', skills: ['.agents:tdd', 'agent-skills:test-driven-development', 'superpowers:test-driven-development'], sources: ['.agents', 'agent-skills', 'superpowers'] },
+  spec: { label: '스펙 작성', skills: ['gstack:spec', 'agent-skills:spec-driven-development'], sources: ['gstack', 'agent-skills'] },
+  simplify: { label: '코드 단순화', skills: ['agent-skills:code-simplification'], sources: ['agent-skills'] },
+};
+
+test('resolveSteps: 여러 출처면 multi (개수·출처·라벨 보존)', () => {
+  const [s] = resolveSteps({ steps: [{ capability: 'tdd', skill: null }] }, GBC);
+  assert.strictEqual(s.resolved.kind, 'multi');
+  assert.strictEqual(s.resolved.count, 3);
+  assert.deepStrictEqual(s.resolved.sources, ['.agents', 'agent-skills', 'superpowers']);
+  assert.strictEqual(s.resolved.label, '테스트 먼저 짜기 (TDD)');
+});
+
+test('resolveSteps: 한 출처면 single', () => {
+  const [s] = resolveSteps({ steps: [{ capability: 'simplify', skill: null }] }, GBC);
+  assert.strictEqual(s.resolved.kind, 'single');
+  assert.strictEqual(s.resolved.count, 1);
+});
+
+test('resolveSteps: 고정핀 있으면 pinned (그 스킬 하나)', () => {
+  const [s] = resolveSteps({ steps: [{ capability: 'tdd', skill: 'superpowers:test-driven-development' }] }, GBC);
+  assert.strictEqual(s.resolved.kind, 'pinned');
+  assert.deepStrictEqual(s.resolved.skills, ['superpowers:test-driven-development']);
+  assert.deepStrictEqual(s.resolved.sources, ['superpowers']);
+});
+
+test('resolveSteps: 모르는 capability(implement)면 none + CAP_LABEL', () => {
+  const [s] = resolveSteps({ steps: [{ capability: 'implement', skill: null }] }, GBC);
+  assert.strictEqual(s.resolved.kind, 'none');
+  assert.strictEqual(s.resolved.count, 0);
+  assert.strictEqual(s.resolved.label, '구현');
+});
+
+test('resolveSteps: groupsByCap 비어도 안 죽고 none(라벨=원문)', () => {
+  const [s] = resolveSteps({ steps: [{ capability: 'tdd', skill: null }] }, {});
+  assert.strictEqual(s.resolved.kind, 'none');
+  assert.strictEqual(s.resolved.label, 'tdd');
 });
