@@ -89,10 +89,16 @@ Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 추천 모드의 **이름 붙은 재사용 버전**이다. 자유 작업문 대신 미리 정의된 흐름(app-dev·bugfix·release-check·code-review·refactor)을 골라, 그 단계 시퀀스를 네 인벤토리로 해소한다.
 
 ### 절차
-1. `node scan.mjs --workflows` → 템플릿 목록(이름·라벨·capability 시퀀스). `list`면 여기서 끝.
+1. `node scan.mjs --workflows` → 워크플로우 목록 + **각 단계의 쓸 스킬**(인벤토리로 해소한 단계별 표; `--workflows --json`이면 각 step에 `resolved` 부착). `list`면 여기서 끝 — 단, 아래 '표 제시' 규칙대로 찍는다.
 2. 고른 `<name>` 템플릿을 읽는다 (이 스킬 폴더의 `workflows.json`). 없는 이름이면 목록 보여주고 되묻기.
 3. 템플릿의 각 step(capability)을 **추천 모드 절차와 똑같이** 해소: `scan.mjs --json` 인벤토리에서 그 capability 가진 스킬 찾기 → 1개면 그것 / 여러 개(중복)면 하나만+나머지 불필요 / 0개면 "기본 Claude로".
 4. 평한국어로 이름 붙은 흐름 출력.
+
+### 표 제시 (list/run 공통)
+`--workflows`(또는 `--workflows --json`)의 각 단계 `resolved`를 **그대로 베끼지 말고 2단 판정**을 입혀 찍는다. scan의 `N곳`은 1단(넓게)이라 역할 다른 후보까지 센다.
+- 단계의 `resolved.skills`에 **판정 루브릭**(역할 분담=보존)을 적용해 "진짜 N곳"으로 보정한다. 예: 아이디어 단계 6곳이어도 캐묻기·상담·의도 캐기를 빼면 진짜 2곳 → `6곳 매칭(진짜 2곳) — superpowers·agent-skills 중 하나`. 코드 리뷰 4곳 → 받기·요청 빼고 진짜 2곳.
+- `kind:'none'`은 "기본 Claude로", `kind:'pinned'`은 고정 스킬(실종이면 `--get`의 `installed:false` 표시로 경고).
+- **평한국어 규칙**(영어 스킬 이름 금지·출처 브랜드명/한국어 라벨만·이모지 금지·담백)을 똑같이 지킨다. capability 라벨은 `resolved.label` 그대로.
 
 ### 커스텀
 사용자가 `workflows.json`에 항목을 추가/수정하면 새 흐름이 생긴다. capability는 scan의 cap(tdd·review·plan·debug·brainstorm·spec·ship·security·simplify)이면 자동 해소, 그 외(implement 등)는 "기본 Claude로" 표기.
