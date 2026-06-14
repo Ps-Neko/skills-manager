@@ -42,26 +42,36 @@ git clone https://github.com/Ps-Neko/skills-manager.git
 ```
 
 ## 사용
-- **검사 (지도)**: `/skills-manager` — 겹친 스킬을 한눈에
+- **검사 (지도)**: `/skills-manager` — 겹친 스킬을 한눈에 (접힌 요약)
+- **전체 상세**: `node scan.mjs --all` — 묶음별 분포·기본 묶음 근거까지
 - **추천**: `/skills-manager recommend "배포 전 점검"` — 작업을 단계 흐름으로 펴고, 단계마다 하나씩
 - **워크플로우**: `/skills-manager workflow list` · `workflow save <이름>` · `workflow <이름>`(실행 안내) — 내 흐름을 이름 붙여 저장·재사용
 - **직접 실행**: `node scan.mjs` (정밀 판정 패킷까지: `node scan.mjs --judge`)
 
-### 출력 예시 (요약)
+### 출력 예시 — 기본 (접힌 요약)
 ```
 Skills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)
-한 줄: 스킬 124개 중 같은 일이 8가지 겹침. 끌 필요 없고, 자주 하는 작업을 '내 흐름'으로 저장해 쓰면 됨.
-깔린 스킬: 약 124개 (사본 486벌 접음)
-  gstack 53 · agent-skills 23 · superpowers 14 · .agents 27 · codex 3 · harness 1 · 직접 3
-같은 일이 겹친 곳 — 8가지:
-  · 테스트 먼저 짜기 (TDD) — 3곳
-  · 디버깅 — 4곳
-  · … (코드 리뷰 · 계획 세우기 · 스펙 작성 · 아이디어/브레인스토밍 · 배포/출시 · 보안 점검)
-기본으로 둘 묶음: agent-skills 8 · gstack 6 · superpowers 5 (가장 많은 걸 기본으로).
-끄기는 거의 안 됨(묶음이 통째로만 꺼짐) — 보여주는 데까지만.
 
-자세히(영어 이름·각 스킬 설명): node scan.mjs --judge
+  한 줄: 스킬 124개 중 같은 일이 8가지 겹침. 끌 건 없고, 자주 하는 작업을 '내 흐름'으로 저장하면 됨.
+
+같은 일이 겹친 곳 — 8가지 (큰 7개만):
+  · 아이디어/브레인스토밍  — 6곳
+  · 코드 리뷰              — 4곳
+  · 디버깅                 — 4곳
+  · 테스트 먼저 짜기 (TDD) — 3곳
+  · 배포/출시              — 3곳
+  · 계획 세우기            — 2곳
+  · 스펙 작성              — 2곳
+  · 나머지 1가지 — 전체 보기: node scan.mjs --all
+
+깔린 스킬 약 124개. 끌 건 없음 — 전체 보기: node scan.mjs --all
+
+다음 한 수:
+  · 지금 하려는 작업을 단계로 펴 보기 — /skills-manager recommend "할 일 한 줄"
+  · 가장 큰 겹침(아이디어/브레인스토밍 6곳)을 자주 쓰면 내 흐름으로 굳히기 — /skills-manager workflow save 내흐름
 ```
+
+전체 분포(묶음별 개수·기본 묶음 근거·끄기 설명)는 `node scan.mjs --all`로 봅니다.
 
 ## 요구사항
 - Node.js (의존성 0)
