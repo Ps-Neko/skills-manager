@@ -22,14 +22,40 @@ export function renderOverlaps(conflicts, { full = false, topN = 7 } = {}) {
   const rest = sorted.length - shown.length;
   const LW = Math.max(2, ...shown.map((c) => dispWidth(c.label))) + 1;
   const head = (!full && rest > 0)
-    ? `같은 일이 겹친 곳 — ${conflicts.length}가지 (큰 ${topN}개만):`
-    : `같은 일이 겹친 곳 — ${conflicts.length}가지:`;
+    ? `같은 일이 겹친 곳 ${conflicts.length}가지 (큰 ${topN}개만):`
+    : `같은 일이 겹친 곳 ${conflicts.length}가지:`;
   const lines = shown.map((c) => `  · ${padW(c.label, LW)}— ${c.hits.length}곳`);
   if (!full && rest > 0) lines.push(`  · 나머지 ${rest}가지 — 전체 보기: node scan.mjs --all`);
   return [head, ...lines].join('\n');
 }
 
-// Task 2~3 에서 구현 예정 — scan.mjs import 바인딩을 미리 확보해 둠.
-export function renderNextAction() { throw new Error('미구현: Task 2'); }
-export function renderInventoryLine() { throw new Error('미구현: Task 3'); }
-export function firstRunBanner() { throw new Error('미구현: Task 3'); }
+// '다음 한 수' 블록 — 검사 결과에서 곧장 다음 행동으로(접힌 사람 출력 끝에만).
+export function renderNextAction(conflicts) {
+  const lines = ['다음 한 수:'];
+  lines.push('  · 지금 하려는 작업을 단계로 펴 보기 — /skills-manager recommend "할 일 한 줄"');
+  if (conflicts.length) {
+    const top = sortedConflicts(conflicts)[0];
+    lines.push(`  · 가장 큰 겹침(${top.label} ${top.hits.length}곳)을 자주 쓰면 내 흐름으로 굳히기 — /skills-manager workflow save 내흐름`);
+  } else {
+    lines.push('  · 미리 짜인 흐름 구경 — /skills-manager workflow list');
+  }
+  return lines.join('\n');
+}
+
+// 깔린 스킬 분포. full=true 면 묶음별 상세, 아니면 한 줄.
+export function renderInventoryLine(uniqCount, by, mirrorFiles, { full = false } = {}) {
+  if (!full) return `깔린 스킬 약 ${uniqCount}개.`;
+  const shortKo = (s) => ({ user: '직접', '.agents': '.agents' })[s] || s;
+  const dist = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([s, n]) => `${shortKo(s)} ${n}`).join(' · ');
+  return `깔린 스킬: 약 ${uniqCount}개 (도구용 사본 ${mirrorFiles}벌 접음)\n  ${dist}`;
+}
+
+// 첫 실행(저장된 흐름 0개) 일회성 안내. 사실 진술만 — 과한 안심·유치체 금지.
+export function firstRunBanner() {
+  return [
+    'Skills Manager에 처음 오셨네요.',
+    '하는 일: 깔린 스킬이 많거나 같은 일이 여기저기 겹칠 때, 무엇이 겹쳤는지 지도로 보여주고',
+    "         자주 하는 작업을 '내 흐름'으로 저장하게 해 줍니다. 스킬을 끄거나 지우진 않아요(읽기 전용).",
+    "아래는 지금 깔린 것의 첫 지도입니다. 끝에 '다음 한 수'가 있어요.",
+  ].join('\n');
+}
