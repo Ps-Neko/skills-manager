@@ -10,13 +10,9 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps, CAP_LABEL } from './workflow-store.mjs';
+import { dispWidth, padW, sortedConflicts, renderOverlaps, renderNextAction, renderInventoryLine, firstRunBanner } from './render.mjs';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
-
-// 한글/CJK 는 터미널 폭 2 → 표 칸 정렬용 표시폭 기준 우측 패딩.
-const isWide = (cp) => (cp >= 0x1100 && cp <= 0x115F) || (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6);
-const dispWidth = (s) => [...s].reduce((w, ch) => w + (isWide(ch.codePointAt(0)) ? 2 : 1), 0);
-const padW = (s, w) => s + ' '.repeat(Math.max(1, w - dispWidth(s)));
 
 const requireArg = (flag) => {
   const v = argAfter(flag);
