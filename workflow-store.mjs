@@ -87,3 +87,21 @@ export function listAll(builtin, user) {
     ...user.map((w) => ({ ...w, source: 'user' })),
   ];
 }
+
+// 저장된 내 흐름에서 한 단계(1부터)의 스킬 핀만 교체/비우기.
+// 인벤토리는 모름 — 저장 파일만 다루는 결정적 조작.
+export function setStepSkill(name, stepIndex, skillId, file = defaultUserFile()) {
+  if (!validName(name)) return { ok: false, reason: 'invalid-name' };
+  if (RESERVED.has(name)) return { ok: false, reason: 'reserved' };
+  const list = loadUser(file);
+  const wf = list.find((w) => w.name === name);
+  if (!wf) return { ok: false, reason: 'not-found' };
+  const steps = Array.isArray(wf.steps) ? wf.steps : [];
+  if (!Number.isInteger(stepIndex) || stepIndex < 1 || stepIndex > steps.length) {
+    return { ok: false, reason: 'bad-step', stepCount: steps.length };
+  }
+  const step = steps[stepIndex - 1];
+  step.skill = skillId == null ? null : String(skillId);
+  writeUser(list, file);
+  return { ok: true, capability: step.capability, skill: step.skill };
+}

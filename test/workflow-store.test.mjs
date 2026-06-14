@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow, annotateMissing, listAll, validStep } from '../workflow-store.mjs';
+import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow, annotateMissing, listAll, validStep, setStepSkill } from '../workflow-store.mjs';
 
 function tmpFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-'));
@@ -131,4 +131,58 @@ test('validStep accepts well-formed steps incl. null skill/note', () => {
   assert.strictEqual(validStep({ capability: 'implement', skill: null }), true);
   assert.strictEqual(validStep({ skill: 'a:b' }), false); // capability 없음
   assert.strictEqual(validStep(null), false);
+});
+
+test('setStepSkill sets a step skill by 1-based index, preserving others', () => {
+  const file = tmpFile();
+  saveWorkflow('mine', { label: 'M', steps: [
+    { capability: 'tdd', skill: null, note: 'a' },
+    { capability: 'review', skill: null, note: 'b' },
+  ] }, file);
+  const res = setStepSkill('mine', 2, 'agent-skills:code-review-and-quality', file);
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.capability, 'review');
+  assert.strictEqual(res.skill, 'agent-skills:code-review-and-quality');
+  const loaded = loadUser(file);
+  assert.strictEqual(loaded[0].steps[1].skill, 'agent-skills:code-review-and-quality');
+  assert.strictEqual(loaded[0].steps[0].skill, null);   // 다른 단계 보존
+  assert.strictEqual(loaded[0].steps[1].note, 'b');      // note 보존
+  assert.strictEqual(loaded[0].steps[1].capability, 'review'); // capability 보존
+});
+
+test('setStepSkill clears a pin with null', () => {
+  const file = tmpFile();
+  saveWorkflow('mine', { steps: [{ capability: 'tdd', skill: 'x:y' }] }, file);
+  const res = setStepSkill('mine', 1, null, file);
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.skill, null);
+  assert.strictEqual(loadUser(file)[0].steps[0].skill, null);
+});
+
+test('setStepSkill rejects reserved built-in names', () => {
+  const file = tmpFile();
+  const res = setStepSkill('app-dev', 1, 'a:b', file);
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.reason, 'reserved');
+});
+
+test('setStepSkill reports not-found for an unknown workflow', () => {
+  const file = tmpFile();
+  const res = setStepSkill('ghost', 1, 'a:b', file);
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.reason, 'not-found');
+});
+
+test('setStepSkill rejects invalid names', () => {
+  const file = tmpFile();
+  assert.strictEqual(setStepSkill('../x', 1, 'a:b', file).reason, 'invalid-name');
+});
+
+test('setStepSkill rejects out-of-range or non-integer step and reports stepCount', () => {
+  const file = tmpFile();
+  saveWorkflow('mine', { steps: [{ capability: 'tdd' }, { capability: 'review' }] }, file);
+  assert.strictEqual(setStepSkill('mine', 0, 'a:b', file).reason, 'bad-step');
+  assert.strictEqual(setStepSkill('mine', 3, 'a:b', file).reason, 'bad-step');
+  assert.strictEqual(setStepSkill('mine', 1.5, 'a:b', file).reason, 'bad-step');
+  assert.strictEqual(setStepSkill('mine', 3, 'a:b', file).stepCount, 2);
 });
