@@ -138,3 +138,15 @@ test('--set-skill without --skill shows usage (exit 1)', () => {
   assert.strictEqual(err.status, 1);
   assert.match(err.stdout, /사용법/);
 });
+
+test('--set-skill without --step shows usage (exit 1)', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  const wf = JSON.stringify({ label: 'm', steps: [{ capability: 'tdd', skill: null }] });
+  run(['--save', 'mine'], { input: wf, home });
+  let err;
+  try { run(['--set-skill', 'mine', '--skill', 'a:b'], { home }); }
+  catch (e) { err = e; }
+  assert.ok(err);
+  assert.strictEqual(err.status, 1);
+  assert.match(err.stdout, /사용법/);
+});
