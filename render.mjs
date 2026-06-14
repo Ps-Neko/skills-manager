@@ -22,8 +22,8 @@ export function renderOverlaps(conflicts, { full = false, topN = 7 } = {}) {
   const rest = sorted.length - shown.length;
   const LW = Math.max(2, ...shown.map((c) => dispWidth(c.label))) + 1;
   const head = (!full && rest > 0)
-    ? `같은 일이 겹친 곳 ${conflicts.length}가지 (큰 ${topN}개만):`
-    : `같은 일이 겹친 곳 ${conflicts.length}가지:`;
+    ? `같은 일이 겹친 곳 — ${conflicts.length}가지 (큰 ${topN}개만):`
+    : `같은 일이 겹친 곳 — ${conflicts.length}가지:`;
   const lines = shown.map((c) => `  · ${padW(c.label, LW)}— ${c.hits.length}곳`);
   if (!full && rest > 0) lines.push(`  · 나머지 ${rest}가지 — 전체 보기: node scan.mjs --all`);
   return [head, ...lines].join('\n');
