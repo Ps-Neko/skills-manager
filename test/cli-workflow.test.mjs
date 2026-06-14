@@ -150,3 +150,16 @@ test('--set-skill without --step shows usage (exit 1)', () => {
   assert.strictEqual(err.status, 1);
   assert.match(err.stdout, /사용법/);
 });
+
+test('--json 은 version·counts·groups 구조를 유지한다 (재배선 안전망)', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-home-'));
+  const out = JSON.parse(run(['--json'], { home }));
+  assert.ok(typeof out.version === 'string', 'version 문자열');
+  assert.ok(out.counts && typeof out.counts.total === 'number', 'counts.total 숫자');
+  assert.ok(Array.isArray(out.skills), 'skills 배열');
+  assert.ok(Array.isArray(out.groups), 'groups 배열');
+  for (const g of out.groups) {
+    assert.ok(typeof g.capability === 'string' && typeof g.label === 'string', 'group 은 capability·label');
+    assert.ok(Array.isArray(g.skills) && Array.isArray(g.sources), 'group 은 skills·sources 배열');
+  }
+});
