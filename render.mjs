@@ -37,8 +37,10 @@ export function renderNextAction(conflicts) {
   if (conflicts.length) {
     const top = sortedConflicts(conflicts)[0];
     lines.push(`  · 가장 큰 겹침(${top.label} ${top.hits.length}곳)을 자주 쓰면 내 흐름으로 굳히기 — /skills-manager workflow save 내흐름`);
+    lines.push('  · 겹침 전체·묶음별 분포 — node scan.mjs --all');
   } else {
     lines.push('  · 미리 짜인 흐름 구경 — /skills-manager workflow list');
+    lines.push('  · 묶음별 분포 전체 — node scan.mjs --all');
   }
   return lines.join('\n');
 }

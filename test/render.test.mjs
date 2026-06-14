@@ -80,6 +80,14 @@ test('renderNextAction: 겹침 없으면 recommend + workflow list 안내', () =
   assert.ok(!out.includes('가장 큰 겹침'));
 });
 
+test('renderNextAction: 접힘에서 전체로 가는 --all 안내 줄을 포함(겹침 유무 무관)', () => {
+  // 접힘 기본 화면이 세로 목록·인벤토리 줄을 안 찍으므로, 전체 보기 진입점은 다음 한 수가 책임진다.
+  const withConflict = renderNextAction([{ label: '디버깅', hits: Array(4).fill(0), sources: [] }]);
+  assert.match(withConflict, /node scan\.mjs --all/);
+  const noConflict = renderNextAction([]);
+  assert.match(noConflict, /node scan\.mjs --all/);
+});
+
 test('renderInventoryLine: 접힘은 한 줄, full 은 묶음별 분포', () => {
   const by = { 'agent-skills': 23, gstack: 53, user: 3 };
   const collapsed = renderInventoryLine(124, by, 486, { full: false });
