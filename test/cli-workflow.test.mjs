@@ -13,7 +13,7 @@ function run(args, { input, home }) {
   return execFileSync(process.execPath, [SCAN, ...args], {
     input: input ?? '',
     encoding: 'utf8',
-    env: { ...process.env, SKILLSWEEP_HOME: home },
+    env: { ...process.env, SKILLS_MANAGER_HOME: home },
   });
 }
 
@@ -23,7 +23,7 @@ test('--save writes to the user home, --workflows --json lists it, --delete remo
 
   const saveOut = run(['--save', 'my-release'], { input: wf, home });
   assert.match(saveOut, /저장|saved/i);
-  assert.ok(fs.existsSync(path.join(home, 'skillsweep-workflows.json')));
+  assert.ok(fs.existsSync(path.join(home, 'skills-manager-workflows.json')));
 
   const listed = JSON.parse(run(['--workflows', '--json'], { home }));
   const mine = listed.workflows.find((w) => w.name === 'my-release');
@@ -45,7 +45,7 @@ test('--save rejects a reserved built-in name (non-zero exit + 안내 메시지)
   assert.ok(err, '예약 이름 저장은 비0 종료로 throw 해야 함');
   assert.notStrictEqual(err.status, 0);
   assert.match(err.stdout, /내장 템플릿 이름/);
-  assert.ok(!fs.existsSync(path.join(home, 'skillsweep-workflows.json')), '예약 이름은 파일을 안 만든다');
+  assert.ok(!fs.existsSync(path.join(home, 'skills-manager-workflows.json')), '예약 이름은 파일을 안 만든다');
 });
 
 test('--get reports not-found as JSON with exit 1', () => {

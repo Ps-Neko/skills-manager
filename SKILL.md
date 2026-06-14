@@ -1,11 +1,11 @@
 ---
-name: skillsweep
-description: Skill manager — scans the skills installed in Claude Code/Cursor and maps which ones overlap (same job across multiple sources) as a read-only, plain-Korean report, then lets you save reusable step workflows. Triggers like "스킬쓸이", "스킬 정리", "스킬 충돌", "겹치는 스킬", "스킬 너무 많아", "skillsweep", "skill manager", "duplicate/overlapping skills".
+name: skills-manager
+description: Skills Manager — scans the skills installed in Claude Code/Cursor and maps which ones overlap (same job across multiple sources) as a read-only, plain-Korean report, then lets you save reusable step workflows. Triggers like "스킬 정리", "스킬 충돌", "겹치는 스킬", "스킬 너무 많아", "Skills Manager", "skills manager", "skill overlap", "duplicate skills".
 ---
 
-# skillsweep (스킬쓸이) — 스킬 중복 지도 + 워크플로우
+# Skills Manager — 스킬 중복 지도 + 워크플로우
 
-**[중요] 검사·추천·실행 안내는 읽기 전용 — 스킬을 끄거나 지우지 않는다.** 쓰기는 워크플로우 저장 파일(`~/.claude/skillsweep-workflows.json`) 한 곳뿐. **스킬 끄기 기능은 없다** — 겹친 스킬 대부분이 플러그인 안에 있고 플러그인은 통째로만 꺼지는 구조적 벽이라(개인 도구로 영구 미구현).
+**[중요] 검사·추천·실행 안내는 읽기 전용 — 스킬을 끄거나 지우지 않는다.** 쓰기는 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`) 한 곳뿐. **스킬 끄기 기능은 없다** — 겹친 스킬 대부분이 플러그인 안에 있고 플러그인은 통째로만 꺼지는 구조적 벽이라(개인 도구로 영구 미구현).
 
 > 실행 경로: 이 스킬 폴더(base 디렉터리)에 `scan.mjs`가 동봉돼 있다. 아래 절차의 `scan.mjs`는 그 파일이다 — base 기준 절대경로로 실행하라: `node "{이 스킬 base 디렉터리}/scan.mjs"`.
 
@@ -41,24 +41,24 @@ description: Skill manager — scans the skills installed in Claude Code/Cursor 
 - **담백하게.** "쉬운 말로"·과한 안심 문구·유치한 풀어쓰기 금지. 정보는 충분히, 톤은 깔끔하게.
 - **한 줄 결론 먼저.** 맨 위에 "끌 필요 없고, 자주 하는 작업을 흐름으로 저장하면 됨" 같은 한 줄.
 - **역할 다른 것 가려주기.** 키워드로 묶였어도 일이 다르면(예: 아이디어/브레인스토밍 6곳 중 '캐묻기'·'상담'은 다른 일) "진짜 겹친 건 2곳"으로.
-- **왜 겹치나 + 고유 역할 (진짜 겹친 묶음 1~2개만).** 가장 중요한 겹침 묶음 1~2개엔 두 가지를 덧붙인다 — (a) **겹치는 프롬프트 예시** 한 줄: "이 PR 리뷰해줘" 한마디에 리뷰 묶음이 같이 걸린다는 식으로 *왜* 겹치는지 보여준다. (b) 키워드로 같이 묶였지만 **역할이 다른 멤버는 각자 고유 역할 한 줄**(예: 머지 전 일반 리뷰 / 여러 기준 품질 리뷰 / 보안 중심). 이게 skillsweep의 차별점 — "겹친다"만이 아니라 "왜 겹치고, 각자 뭐가 다른지"까지. 단 **담백하게: 모든 묶음에 달지 말고 핵심 1~2개만**(나머지는 'N곳' 카운트로 충분).
+- **왜 겹치나 + 고유 역할 (진짜 겹친 묶음 1~2개만).** 가장 중요한 겹침 묶음 1~2개엔 두 가지를 덧붙인다 — (a) **겹치는 프롬프트 예시** 한 줄: "이 PR 리뷰해줘" 한마디에 리뷰 묶음이 같이 걸린다는 식으로 *왜* 겹치는지 보여준다. (b) 키워드로 같이 묶였지만 **역할이 다른 멤버는 각자 고유 역할 한 줄**(예: 머지 전 일반 리뷰 / 여러 기준 품질 리뷰 / 보안 중심). 이게 Skills Manager의 차별점 — "겹친다"만이 아니라 "왜 겹치고, 각자 뭐가 다른지"까지. 단 **담백하게: 모든 묶음에 달지 말고 핵심 1~2개만**(나머지는 'N곳' 카운트로 충분).
 
 좋은 예시 — 이 틀·톤을 따르고, 라벨은 scan 출력과 일치시켜라:
 
 > **한눈에**: 스킬 124개 중 같은 일이 8가지 겹침. 끌 필요 없고, 자주 하는 작업을 흐름으로 저장하면 됨.
 > **겹친 일들**: 테스트 먼저 짜기 (TDD) 3곳 / 코드 리뷰 4곳(진짜 겹친 건 2곳 — 받기·요청은 다른 일) / 디버깅 4곳 / 계획 세우기·스펙 작성·보안 점검 각 2곳 / 아이디어/브레인스토밍 6곳(진짜 2곳 — 캐묻기·상담은 다른 일) / 배포/출시 3곳
 > **왜 겹치나 (코드 리뷰)**: "이 PR 리뷰해줘" 한마디에 리뷰 묶음이 같이 걸림. 단 '리뷰 받아 반영'·'리뷰 요청'은 다른 일이라 빼면, 진짜 겹치는 둘은 — 하나는 머지 전 일반 리뷰, 하나는 여러 기준 품질 리뷰. 자주 쓰는 하나로 통일하면 됨.
-> **그래서**: 끄는 건 거의 안 됨(묶음이 통째로만 꺼져서 고유한 것까지 잃음). 자주 하는 작업을 `/skillsweep workflow save 내흐름`으로 저장해 쓰면 됨.
+> **그래서**: 끄는 건 거의 안 됨(묶음이 통째로만 꺼져서 고유한 것까지 잃음). 자주 하는 작업을 `/skills-manager workflow save 내흐름`으로 저장해 쓰면 됨.
 
 ---
 
 ## 추천 모드 (recommend) — v0.2
 
-트리거: `/skillsweep recommend "<작업>"` 또는 "이 작업 뭐 쓰지?" / "기획부터 구현까지" / "배포 전 점검" 같은 자연어.
+트리거: `/skills-manager recommend "<작업>"` 또는 "이 작업 뭐 쓰지?" / "기획부터 구현까지" / "배포 전 점검" 같은 자연어.
 
 ### 차별화 원칙 (꼭 지킬 것)
 이건 **"스킬 하나 추천"이 아니다** — 그건 Claude Code가 이미 스킬 설명 읽고 한다. 그걸 또 하면 무의미.
-skillsweep recommend의 가치는 **호스트가 구조상 못 하는 것**:
+Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 > **네 작업을 [단계 흐름]으로 펴고, 단계마다 네가 실제로 깐 (중복 포함) 스킬 중 하나로 정리해준다.**
 즉 "이 작업 = 5단계, 3단계엔 네가 깐 TDD 3개가 겹치니 그중 하나만" — **네 인벤토리 전체를 가로질러 중복까지 해소한 순서**. 단일 생태계는 자기 위에서 이걸 못 한다.
 
@@ -84,7 +84,7 @@ skillsweep recommend의 가치는 **호스트가 구조상 못 하는 것**:
 
 ## 워크플로우 모드 (workflow) — v0.3
 
-트리거: `/skillsweep workflow <name>` 또는 `/skillsweep workflow list`.
+트리거: `/skills-manager workflow <name>` 또는 `/skills-manager workflow list`.
 
 추천 모드의 **이름 붙은 재사용 버전**이다. 자유 작업문 대신 미리 정의된 흐름(app-dev·bugfix·release-check·code-review·refactor)을 골라, 그 단계 시퀀스를 네 인벤토리로 해소한다.
 
@@ -97,13 +97,13 @@ skillsweep recommend의 가치는 **호스트가 구조상 못 하는 것**:
 ### 커스텀
 사용자가 `workflows.json`에 항목을 추가/수정하면 새 흐름이 생긴다. capability는 scan의 cap(tdd·review·plan·debug·brainstorm·spec·ship·security·simplify)이면 자동 해소, 그 외(implement 등)는 "기본 Claude로" 표기.
 
-### 저장 (save) — `/skillsweep workflow save <이름>`
+### 저장 (save) — `/skills-manager workflow save <이름>`
 1. 저장할 흐름을 확보: (a) 직전 `recommend`/`workflow <name>` 결과를 쓰거나, (b) 사용자와 단계를 정한다.
 2. 중복(여러 출처) 단계는 사용자에게 **하나를 고르게** 해 고정한다(`"출처:이름"`). 못 고르거나 없으면 `skill: null`.
 3. 완성한 워크플로우 JSON을 `node scan.mjs --save "<이름>"` 의 stdin 으로 넘긴다(형식: `{ "label": "...", "steps": [{ "capability": "...", "skill": "출처:이름"|null, "note": "" }] }`).
 4. 결과 문구(저장/덮어씀/실패 사유)를 평한국어로 그대로 전한다.
 
-### 수정 (스킬 교체) — `/skillsweep workflow set-skill <이름>`
+### 수정 (스킬 교체) — `/skills-manager workflow set-skill <이름>`
 저장한 내 흐름에서 **한 단계의 스킬 핀만** 바꾼다(단계 추가/삭제·이름변경은 안 함).
 1. `node scan.mjs --get "<이름>"` 으로 현재 단계와 박힌 스킬을 읽는다.
 2. 바꿀 단계의 capability에 겹침 후보가 여럿이면(`scan.mjs --json` groups) 후보를 보여주고 사용자가 하나 고르게 한다(우열 단정 금지).
@@ -113,21 +113,21 @@ skillsweep recommend의 가치는 **호스트가 구조상 못 하는 것**:
 - **내장 템플릿은 직접 못 고친다** — 먼저 `--get <내장>` 으로 받아 `--save <내이름>` 으로 내 흐름에 복제한 뒤 고친다.
 - **제거는 이미 있다** → 아래 `### 삭제 (delete)` 참고. (수정·제거가 둘 다 된다.)
 
-### 실행 (run) — `/skillsweep workflow <이름>` 또는 `workflow run <이름>`
+### 실행 (run) — `/skills-manager workflow <이름>` 또는 `workflow run <이름>`
 1. `node scan.mjs --get "<이름>"` 으로 워크플로우(고정스킬 `installed` 표시 포함)를 읽는다. `not-found` 면 `--workflows` 목록을 보여주고 되묻는다.
 2. 단계별로 안내한다: 각 단계의 capability + 고정 스킬을 "이 단계엔 이거 쓰세요"로. `skill:null`/cap 없음은 "기본 Claude로".
 3. **이번엔 다른 거**: 사용자가 바꾸려 하면 그 capability의 중복 후보(`scan.mjs --json` groups)를 보여주고 **이번 실행만** 교체한다. 저장본은 사용자가 "이걸로 바꿔 저장"이라 해야 `save`로 갱신.
 4. **고정 스킬 실종**(`installed:false`): "이 단계에 고정했던 X가 지금 안 보여요" + 그 capability의 현재 후보를 제시해 다시 고르게 한다. 절대 멈추지 말 것.
-5. skillsweep는 **조언만** 한다 — 실제 작업은 호스트가. 스킬을 자동 실행하지 않는다.
+5. Skills Manager는 **조언만** 한다 — 실제 작업은 호스트가. 스킬을 자동 실행하지 않는다.
 
-### 삭제 (delete) — `/skillsweep workflow delete <이름>`
+### 삭제 (delete) — `/skills-manager workflow delete <이름>`
 `node scan.mjs --delete "<이름>"`. 내 워크플로우만 지워진다(내장 템플릿은 못 지움 — 그대로 안내). 지우기 전 한 번 확인.
 
 ### 경계
-읽기 전용 — 흐름·추천·실행 안내만. **쓰기는 오직 내가 저장한 워크플로우 파일(`~/.claude/skillsweep-workflows.json`) 한 곳뿐** — settings.json·스킬 폴더·다른 스킬은 절대 안 건드린다(스킬 끄기 없음). 실제 작업 실행도 없음(조언자).
+읽기 전용 — 흐름·추천·실행 안내만. **쓰기는 오직 내가 저장한 워크플로우 파일(`~/.claude/skills-manager-workflows.json`) 한 곳뿐** — settings.json·스킬 폴더·다른 스킬은 절대 안 건드린다(스킬 끄기 없음). 실제 작업 실행도 없음(조언자).
 
 ## 경계 (전체)
 - 검사·추천·실행 안내 = 읽기 전용. settings.json·스킬 폴더·다른 스킬을 **건드리지 않는다**.
-- 쓰기는 워크플로우 저장 파일(`~/.claude/skillsweep-workflows.json`) 한 곳뿐.
+- 쓰기는 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`) 한 곳뿐.
 - **스킬 끄기는 없다** — 겹친 스킬 대부분이 플러그인 안이고 플러그인은 통째로만 꺼지는 구조적 벽(개인 도구로 영구 미구현).
 - 자기 출력/아카이브 폴더(`.skill-janitor-archive`)는 스캔에서 영구 제외(자기오염 금지).

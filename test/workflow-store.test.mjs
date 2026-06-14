@@ -8,7 +8,7 @@ import { saveWorkflow, loadUser, validName, RESERVED, removeWorkflow, annotateMi
 
 function tmpFile() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-'));
-  return path.join(dir, 'skillsweep-workflows.json');
+  return path.join(dir, 'skills-manager-workflows.json');
 }
 
 test('save then load round-trips a workflow', () => {

@@ -2,11 +2,11 @@
 
 - 날짜: 2026-06-14
 - 상태: 승인됨 (브레인스토밍 → 설계 합의 완료)
-- 범위: skillsweep 워크플로우의 **저장된 흐름에서 단계별 스킬 핀만 교체**
+- 범위: Skills Manager 워크플로우의 **저장된 흐름에서 단계별 스킬 핀만 교체**
 
 ## 배경 / 문제
 
-skillsweep 워크플로우는 "작업 순서표"다. 각 단계(step)는 `capability`(하는 일)와
+Skills Manager 워크플로우는 "작업 순서표"다. 각 단계(step)는 `capability`(하는 일)와
 선택적 `skill`(그 단계에 박아 둔 스킬 핀)을 가진다.
 
 현재 가능한 쓰기 조작:
@@ -76,12 +76,12 @@ stdin JSON 하나뿐이라, 사람이 직접 한 줄로 칠 수 있는 경로가
   | `invalid-name` | `이름이 올바르지 않아요(영숫자·한글·-·_ 1~40자).` |
 
 > 알려진 사소한 엣지: `~/.claude/skills`가 아예 없으면 상위 가드(80행)가 먼저
-> 종료하므로 `--set-skill`이 동작하지 않는다. skillsweep은 스킬이 깔려 있어야 의미가
+> 종료하므로 `--set-skill`이 동작하지 않는다. Skills Manager은 스킬이 깔려 있어야 의미가
 > 있으므로 실사용에서 문제 없음(문서에 명시).
 
 ### 3. SKILL.md 문서
 
-워크플로우 모드에 **"수정 (스킬 교체) — `/skillsweep workflow set-skill`"** 절 신설:
+워크플로우 모드에 **"수정 (스킬 교체) — `/skills-manager workflow set-skill`"** 절 신설:
 - 채팅 흐름: 현재 박힌 스킬 + 그 단계 capability의 겹침 후보(`--json` groups)를 보여주고
   → 사용자가 고르면 → `--set-skill` 호출.
 - 직접 CLI 형식 명시(위 2의 예시).
@@ -96,7 +96,7 @@ stdin JSON 하나뿐이라, 사람이 직접 한 줄로 칠 수 있는 경로가
   - 범위밖 거부: `0`, `단계수+1`, 비정수
   - 파일 round-trip(`loadUser`로 재확인)
   - `capability`·`note`·다른 단계 보존
-- `test/cli-workflow.test.mjs` — `--set-skill` 통합(임시 `SKILLSWEEP_HOME`):
+- `test/cli-workflow.test.mjs` — `--set-skill` 통합(임시 `SKILLS_MANAGER_HOME`):
   - 정상 exit 0 + 문구
   - `none`으로 비우기 exit 0
   - 예약·없음·범위밖 → exit 1 + 사유 문구
@@ -105,11 +105,11 @@ stdin JSON 하나뿐이라, 사람이 직접 한 줄로 칠 수 있는 경로가
 
 ## 배포 주의
 
-전역 설치본(`~/.claude/skills/skillsweep`)은 dev 레포의 구버전 복사다.
+전역 설치본(`~/.claude/skills/skills-manager`)은 dev 레포의 구버전 복사다.
 구현 후 변경 파일(`scan.mjs`·`workflow-store.mjs`·`SKILL.md` + 테스트)을
-전역본에 수동 동기화해야 실제 `/skillsweep`에서 새 명령이 동작한다.
+전역본에 수동 동기화해야 실제 `/skills-manager`에서 새 명령이 동작한다.
 
 ## 경계 재확인
 
-쓰기는 오직 사용자 워크플로우 파일(`~/.claude/skillsweep-workflows.json`) 한 곳.
+쓰기는 오직 사용자 워크플로우 파일(`~/.claude/skills-manager-workflows.json`) 한 곳.
 settings·스킬 폴더·다른 스킬은 건드리지 않는다. 스킬 끄기 없음.

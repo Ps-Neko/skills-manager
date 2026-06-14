@@ -1,5 +1,5 @@
 // workflow-store.mjs
-// skillsweep 워크플로우 저장소 — 내가 저장한 워크플로우의 파일 I/O.
+// Skills Manager 워크플로우 저장소 — 내가 저장한 워크플로우의 파일 I/O.
 // ⚠️ 쓰기는 오직 이 사용자 파일에만. settings·스킬 폴더·다른 스킬은 안 건드린다.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -24,10 +24,10 @@ export function validStep(s) {
 }
 
 // 사용자 파일은 스킬 폴더 밖 — 재설치(폴더 덮어쓰기)에도 안 날아간다.
-// 테스트는 SKILLSWEEP_HOME 으로 임시 디렉터리를 가리켜 실제 ~/.claude 를 안 건드린다.
+// 테스트는 SKILLS_MANAGER_HOME 으로 임시 디렉터리를 가리켜 실제 ~/.claude 를 안 건드린다.
 export function defaultUserFile() {
-  const home = process.env.SKILLSWEEP_HOME || path.join(os.homedir(), '.claude');
-  return path.join(home, 'skillsweep-workflows.json');
+  const home = process.env.SKILLS_MANAGER_HOME || path.join(os.homedir(), '.claude');
+  return path.join(home, 'skills-manager-workflows.json');
 }
 
 export function loadUser(file = defaultUserFile()) {

@@ -291,7 +291,7 @@ if (process.argv.includes('--set-skill')) {
 `scan.mjs` 42행을 교체:
 
 ```js
-    console.log('\n사용: /skillsweep workflow <name> (실행) · save <name> · set-skill <name> --step N --skill <id|none> · delete <name>\n');
+    console.log('\n사용: /skills-manager workflow <name> (실행) · save <name> · set-skill <name> --step N --skill <id|none> · delete <name>\n');
 ```
 
 - [ ] **Step 6: 통과 확인**
@@ -326,7 +326,7 @@ Run: 워크플로우 모드의 `### 저장 (save)` 와 `### 실행 (run)` 절을
 `### 저장 (save)` 절이 끝나는 지점 뒤에 삽입:
 
 ```markdown
-### 수정 (스킬 교체) — `/skillsweep workflow set-skill <이름>`
+### 수정 (스킬 교체) — `/skills-manager workflow set-skill <이름>`
 저장한 내 흐름에서 **한 단계의 스킬 핀만** 바꾼다(단계 추가/삭제·이름변경은 안 함).
 1. `node scan.mjs --get "<이름>"` 으로 현재 단계와 박힌 스킬을 읽는다.
 2. 바꿀 단계의 capability에 겹침 후보가 여럿이면(`scan.mjs --json` groups) 후보를 보여주고 사용자가 하나 고르게 한다(우열 단정 금지).
@@ -353,34 +353,34 @@ git commit -m "docs(skill): 워크플로우 '수정(스킬 교체)' 절 추가 +
 
 ## Task 4: 전역 설치본 동기화 + 라이브 스모크 (권한 게이트)
 
-> 전역 설치본(`~/.claude/skills/skillsweep`)은 dev 레포의 구버전 복사다. 사용자의 실제 `/skillsweep` 가 새 명령을 쓰려면 변경 파일을 복사해야 한다. **`~/.claude` 쓰기는 CLAUDE.md상 명시 허가 필요 — 이 태스크 시작 전 사용자에게 허가를 받는다.**
+> 전역 설치본(`~/.claude/skills/skills-manager`)은 dev 레포의 구버전 복사다. 사용자의 실제 `/skills-manager` 가 새 명령을 쓰려면 변경 파일을 복사해야 한다. **`~/.claude` 쓰기는 CLAUDE.md상 명시 허가 필요 — 이 태스크 시작 전 사용자에게 허가를 받는다.**
 
 - [ ] **Step 1: 사용자 허가 요청**
 
 다음 형식으로 묻는다:
 - 🔧 무슨 작업: dev 레포의 3파일을 전역 설치본에 복사(동기화)
-- 📁 대상: `~/.claude/skills/skillsweep/{scan.mjs, workflow-store.mjs, SKILL.md}`
-- ⚠️ 왜: 전역본이 구버전 복사라 안 하면 실제 `/skillsweep` 에서 `set-skill` 이 안 보임
+- 📁 대상: `~/.claude/skills/skills-manager/{scan.mjs, workflow-store.mjs, SKILL.md}`
+- ⚠️ 왜: 전역본이 구버전 복사라 안 하면 실제 `/skills-manager` 에서 `set-skill` 이 안 보임
 - ✅ 허가해도 되나요?: 권장 (읽기전용 도구 + 워크플로우 파일 외엔 안 건드림)
 
 - [ ] **Step 2: 허가 시 복사**
 
 ```bash
-cp workflow-store.mjs scan.mjs SKILL.md "$HOME/.claude/skills/skillsweep/"
+cp workflow-store.mjs scan.mjs SKILL.md "$HOME/.claude/skills/skills-manager/"
 ```
 
 - [ ] **Step 3: 라이브 스모크 (전역본으로 end-to-end)**
 
 ```bash
-GLOBAL="$HOME/.claude/skills/skillsweep"
+GLOBAL="$HOME/.claude/skills/skills-manager"
 TMP=$(mktemp -d)
-printf '%s' '{"label":"스모크","steps":[{"capability":"tdd","skill":null,"note":""}]}' | SKILLSWEEP_HOME="$TMP" node "$GLOBAL/scan.mjs" --save smoke-set
-SKILLSWEEP_HOME="$TMP" node "$GLOBAL/scan.mjs" --set-skill smoke-set --step 1 --skill agent-skills:test-driven-development
-SKILLSWEEP_HOME="$TMP" node "$GLOBAL/scan.mjs" --get smoke-set
-SKILLSWEEP_HOME="$TMP" node "$GLOBAL/scan.mjs" --delete smoke-set
+printf '%s' '{"label":"스모크","steps":[{"capability":"tdd","skill":null,"note":""}]}' | SKILLS_MANAGER_HOME="$TMP" node "$GLOBAL/scan.mjs" --save smoke-set
+SKILLS_MANAGER_HOME="$TMP" node "$GLOBAL/scan.mjs" --set-skill smoke-set --step 1 --skill agent-skills:test-driven-development
+SKILLS_MANAGER_HOME="$TMP" node "$GLOBAL/scan.mjs" --get smoke-set
+SKILLS_MANAGER_HOME="$TMP" node "$GLOBAL/scan.mjs" --delete smoke-set
 ```
 
-Expected: `--set-skill` 가 `고쳤어요: smoke-set의 1단계(tdd) 스킬을 'agent-skills:test-driven-development'로 설정.` 출력, `--get` JSON의 `steps[0].skill` 이 그 id, `--delete` 가 삭제 확인. (임시 `SKILLSWEEP_HOME` 이라 사용자 실제 워크플로우 파일은 안 건드림.)
+Expected: `--set-skill` 가 `고쳤어요: smoke-set의 1단계(tdd) 스킬을 'agent-skills:test-driven-development'로 설정.` 출력, `--get` JSON의 `steps[0].skill` 이 그 id, `--delete` 가 삭제 확인. (임시 `SKILLS_MANAGER_HOME` 이라 사용자 실제 워크플로우 파일은 안 건드림.)
 
 - [ ] **Step 4: 결과 보고**
 
