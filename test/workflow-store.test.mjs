@@ -222,8 +222,15 @@ test('resolveSteps: 모르는 capability(implement)면 none + CAP_LABEL', () => 
   assert.strictEqual(s.resolved.label, '구현');
 });
 
-test('resolveSteps: groupsByCap 비어도 안 죽고 none(라벨=원문)', () => {
+test('resolveSteps: groupsByCap 비어도 안 죽고 none — 알려진 cap 은 정적 한국어 라벨', () => {
+  // 인벤토리 없음(빈 groups)이라도 알려진 cap 은 CAP_LABEL 로 한국어 라벨 보장(영어 추락 금지).
   const [s] = resolveSteps({ steps: [{ capability: 'tdd', skill: null }] }, {});
   assert.strictEqual(s.resolved.kind, 'none');
-  assert.strictEqual(s.resolved.label, 'tdd');
+  assert.strictEqual(s.resolved.label, '테스트 먼저 짜기 (TDD)');
+});
+
+test('resolveSteps: 정적 라벨도 없는 미지 cap 은 원문으로 폴백', () => {
+  const [s] = resolveSteps({ steps: [{ capability: 'zzz-unknown', skill: null }] }, {});
+  assert.strictEqual(s.resolved.kind, 'none');
+  assert.strictEqual(s.resolved.label, 'zzz-unknown');
 });
