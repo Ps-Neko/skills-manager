@@ -33,10 +33,26 @@ export function defaultUserFile() {
   return path.join(home, 'skills-manager-workflows.json');
 }
 
+// 읽기 경계 정화 — 구버전/수동편집 파일이 name·label·capability·skill·note 에 제어문자를 품어도
+// 모든 소비자(--workflows·--get·--save 목록·set-skill 라벨)가 안전하도록 읽을 때 한 번 떼어낸다.
+// 쓰기 경로는 validStep/validName 이 막지만 그 이전에 만들어진 파일은 여기서 자가치유.
+// 문자열만 정화 — null/undefined skill·note 는 그대로 둔다(null=핀 없음 의미 보존).
+const cleanStr = (v) => (typeof v === 'string' ? stripCtl(v) : v);
+function sanitizeLoaded(w) {
+  if (!w || typeof w !== 'object') return w;
+  const out = { ...w, name: cleanStr(w.name), label: cleanStr(w.label) };
+  if (Array.isArray(w.steps)) {
+    out.steps = w.steps.map((s) => (s && typeof s === 'object')
+      ? { ...s, capability: cleanStr(s.capability), skill: cleanStr(s.skill), note: cleanStr(s.note) }
+      : s);
+  }
+  return out;
+}
+
 export function loadUser(file = defaultUserFile()) {
   try {
     const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-    return Array.isArray(j.workflows) ? j.workflows : [];
+    return Array.isArray(j.workflows) ? j.workflows.map(sanitizeLoaded) : [];
   } catch {
     return []; // 없거나 손상 → 빈 목록(안전).
   }
