@@ -13,7 +13,7 @@ Claude Code랑 Cursor에 스킬을 계속 깔다 보니, 어느 순간부터 문
 > *A read-only command that maps which of your installed Claude Code / Cursor skills overlap (same job, multiple sources), and lets you save reusable step workflows.*
 
 ## 주요 기능
-- 설치된 스킬 전체 스캔 (도구 호환용 미러 사본은 접어서 셈 — 600개처럼 보이던 게 실은 ~100개)
+- 설치된 스킬 전체 스캔 (도구 호환용 미러 사본은 접어서 셈 — 600개처럼 보이던 게 실은 100여 개)
 - 같은 역할로 겹치는 스킬 확인
 - gstack · superpowers · agent-skills 등 **출처별 분포** 확인 + 플러그인 켜짐/꺼짐
 - TDD · 코드 리뷰 · 디버깅 · 계획 · 배포 · 보안 같은 **작업별 중복** 확인
