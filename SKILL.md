@@ -5,7 +5,7 @@ description: Skills Manager — scans the skills installed in Claude Code/Cursor
 
 # Skills Manager — 스킬 중복 지도 + 워크플로우
 
-**[중요] 검사·추천 안내는 읽기 전용.** 쓰기는 두 가지뿐 — (1) 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`), (2) **관리 모드(remove)에서만, 사용자 확인 후** standalone 스킬 폴더 삭제 + 그에 딸린 자기 워크플로우 핀 정리. 그 외 설정·다른 스킬은 안 건드린다. **플러그인 안 스킬은 개별 끄기/제거가 불가능**하다 — 통째로만 꺼지는 구조적 벽(개인 도구로 영구 미구현). 제거 잔여물 탐지·업데이트 점검은 읽기 전용 보조 스크립트(`manage-scan.mjs`)로 한다.
+**[중요] 검사·추천·업데이트/잔여물 탐지는 읽기 전용.** 쓰기는 셋뿐 — (1) 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`), (2) **관리 모드에서 `--confirm` 확인 후** standalone 스킬 폴더를 **휴지통으로 이동**(영구삭제 아님 · `manage-scan.mjs --remove`), (3) 그에 딸린 워크플로우 핀 정리(`scan.mjs --set-skill`). 그 외 설정·다른 스킬은 안 건드린다. **플러그인 안 스킬은 개별 끄기/제거가 불가능**하다 — 통째로만 꺼지는 구조적 벽이라 네이티브 `/plugin uninstall` 안내만 한다.
 
 > 실행 경로: 이 스킬 폴더(base 디렉터리)에 `scan.mjs`가 동봉돼 있다. 아래 절차의 `scan.mjs`는 그 파일이다 — base 기준 절대경로로 실행하라: `node "{이 스킬 base 디렉터리}/scan.mjs"`.
 
@@ -174,12 +174,12 @@ Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 `node scan.mjs --delete "<이름>"`. 내 워크플로우만 지워진다(내장 템플릿은 못 지움 — 그대로 안내). 지우기 전 한 번 확인.
 
 ### 경계
-읽기 전용 — 흐름·추천·실행 안내만. **쓰기는 오직 내가 저장한 워크플로우 파일(`~/.claude/skills-manager-workflows.json`) 한 곳뿐** — settings.json·스킬 폴더·다른 스킬은 절대 안 건드린다(스킬 끄기 없음). 실제 작업 실행도 없음(조언자).
+**워크플로우 모드**의 쓰기는 저장 파일(`~/.claude/skills-manager-workflows.json`) 한 곳뿐 — 흐름·추천·실행 안내만 하고 settings.json·다른 스킬은 안 건드린다. (standalone 스킬 폴더 제거는 별도 아래 '관리 모드'의 `--remove --confirm`에서만.) 실제 작업 실행도 없음(조언자).
 
 ## 관리 모드 (update / remove)
 
 트리거: `/skills-manager update`("스킬 업데이트 점검"), `/skills-manager remove <스킬이름>`("스킬 제거", "깨끗이 지워").
-탐지는 동봉된 **읽기 전용** 보조 스크립트로 한다: `node "{base}/manage-scan.mjs" --update-status | --residue <이름>`. 실제 정리·삭제는 **사용자 확인 후** 기존 도구로만.
+업데이트·잔여물 **탐지는 읽기 전용**: `node "{base}/manage-scan.mjs" --update-status | --residue <이름>`. standalone 스킬 **제거는 `--remove`** — 확인 없이 부르면 **dry-run 미리보기**, `--confirm <토큰>`일 때만 휴지통으로 이동(영구삭제 아님). 워크플로우 핀 정리는 `scan.mjs --set-skill`.
 
 ### 업데이트 점검·수행 (update)
 1. `node manage-scan.mjs --update-status` 실행 → standalone 분류(git/copy) + 플러그인 목록(켜짐/꺼짐).
@@ -193,18 +193,19 @@ Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 ### 제거 (remove) — 잔여물 0 목표
 1. **플러그인 스킬이면**(manage-scan 결과 location=plugin): 개별 제거는 불가하지만 **멈추지 말고 현실적 선택지를 안내**한다. `--residue`가 돌려준 `removalGuide`로 소속 플러그인·함께 사라질 형제 스킬 수·켜짐 여부를 알려주고, 세 가지를 평한국어로 제시한다 — ① **통째 제거**(`/plugin uninstall <plugin>@<market>`; 형제 N개도 같이 손실) ② **통째 끄기**(제거 아님, settings `false`/`/plugin disable`, 되돌리기 쉬움) ③ **그 스킬 폴더만 물리 삭제**(비공식 — 플러그인 업데이트 때 되돌아올 수 있음). 보통 다른 게 필요 없으면 ①, 일단 숨기려면 ②를 권하고, ③은 위험을 분명히 한 뒤 본인이 택할 때만.
 2. **standalone 스킬이면**:
-   a. `node manage-scan.mjs --residue <이름>` 실행 → 잔여물 자리 전부 탐지(미리보기, 읽기 전용).
-   b. 무엇이 지워지고 무엇이 남는지 평한국어로 보여주고 **삭제 전 확인**을 받는다.
+   a. `node manage-scan.mjs --remove <이름>` 실행(확인 없음 = **dry-run**) → 무엇이 휴지통으로 갈지 + 함께 정리할 잔여물(워크플로우 핀 등) + **확인 토큰**을 미리 보여준다.
+   b. 무엇이 옮겨지고 무엇이 남는지 평한국어로 보여주고 **제거 전 확인**을 받는다.
    c. 확인되면 수행:
+      - **스킬 폴더 제거**: `node manage-scan.mjs --remove <이름> --confirm <토큰>` → 폴더를 `~/.claude/.skills-manager-trash/`로 이동(영구삭제 아님, 복구 가능). realpath로 skills 직속 하위만 허용·심링크 탈출 방어, 모든 제거를 감사 로그에 남긴다.
       - **워크플로우 사용자 핀**: `node scan.mjs --set-skill <흐름> --step <n> --skill none`(또는 다른 스킬로 교체).
       - **ECC 원장·메모리 평문 언급**: ECC는 갱신 절차로 재생성 권장, 메모리는 '제거됨'으로 서술 보정(사용자 동의 시). 무턱대고 수동 편집 금지.
-      - **스킬 폴더 삭제**: 확인된 삭제로 `skills/<이름>/` 제거(learned/imported면 `.provenance.json` 포함 통폴더).
-   d. 삭제 후 남은 수동 정리 자리가 있으면 목록으로 안내(잔여물 0 확인).
-3. **경계**: `manage-scan.mjs`는 읽기 전용 탐지뿐. settings.json·플러그인 제거는 네이티브(`/plugin`)·확인 경로로만. 어떤 삭제도 확인 없이 하지 않는다.
+   d. 제거 후 남은 수동 정리 자리가 있으면 목록으로 안내(잔여물 0 확인). 잘못 지웠으면 휴지통 폴더에서 되돌릴 수 있다.
+3. **경계**: `--remove --confirm` 은 standalone 스킬 폴더를 **휴지통으로 이동**하는 단 하나의 제거 쓰기다(dry-run·탐지는 읽기 전용). settings.json·플러그인 제거는 네이티브(`/plugin`)로만. 어떤 제거도 `--confirm` 없이는 하지 않는다.
 
 ## 경계 (전체)
-- 검사·추천 안내 = 읽기 전용. settings.json·다른 스킬을 **건드리지 않는다**.
-- 쓰기는 두 곳: 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`), 그리고 **관리 모드(remove)에서 사용자 확인 후** standalone 스킬 폴더 삭제 + 그 핀 정리.
-- **플러그인 안 스킬 개별 끄기/제거는 없다** — 통째로만 꺼지는 구조적 벽(개인 도구로 영구 미구현). 통째 제거는 네이티브 `/plugin uninstall`.
-- 업데이트·잔여물 탐지는 읽기 전용 보조(`manage-scan.mjs`). 실제 git pull·삭제는 확인 후에만.
+- 검사·추천·업데이트/잔여물 탐지 = 읽기 전용. settings.json·다른 스킬을 **건드리지 않는다**.
+- 쓰기는 셋뿐: (1) 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`), (2) `--confirm` 확인 후 standalone 스킬 폴더를 **휴지통으로 이동**(`manage-scan.mjs --remove`, 영구삭제 아님), (3) 그 워크플로우 핀 정리(`scan.mjs --set-skill`).
+- 제거 안전장치: realpath로 `~/.claude/skills` 직속 하위만 허용(심링크 탈출·경로 주입 방어), 기본 dry-run, `--confirm <토큰>`일 때만 실행, 모든 제거를 감사 로그(`.skills-manager-trash/removals.log.jsonl`)에 기록.
+- **플러그인 안 스킬 개별 끄기/제거는 없다** — 통째로만 꺼지는 구조적 벽. 통째 제거는 네이티브 `/plugin uninstall`.
+- 실제 git pull 은 확인 후에만.
 - 자기 출력/아카이브 폴더(`.skill-janitor-archive`)는 스캔에서 영구 제외(자기오염 금지).

@@ -2,7 +2,8 @@
 // Skills Manager — 스킬 중복 지도 + 워크플로우
 // ~/.claude 의 스킬·에이전트·플러그인을 "읽기 전용"으로 훑어,
 // 같은 일을 하는 스킬이 여러 출처에 겹쳐 깔린 걸 평한국어 지도로 보여준다.
-// [경계] 검사·추천은 읽기 전용(안 끄고 안 바꿈). 쓰기는 워크플로우 저장 파일 한 곳만.
+// [경계] 검사·추천은 읽기 전용(안 끄고 안 바꿈). scan.mjs 의 쓰기는 워크플로우 저장 파일 한 곳뿐.
+//   (standalone 스킬 폴더 제거는 manage-scan.mjs --remove --confirm 가 휴지통 이동으로만 — scan.mjs 는 폴더를 안 지운다.)
 //   1단(키워드)으로 후보를 넓게 묶고, 2단 정밀 판정은 `--judge` 패킷을 LLM이 읽어서.
 
 import fs from 'node:fs';
@@ -11,7 +12,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps } from './workflow-store.mjs';
 import { scanInventory } from './scanner.mjs';
-import { capsOf, classify } from './classifier.mjs';
+import { capsOfItem, classify } from './classifier.mjs';
 import { buildHumanReport, buildJudgePacket } from './view-model.mjs';
 import { dispWidth, padW, renderReport, renderJudgePacket } from './render.mjs';
 
@@ -29,6 +30,13 @@ const SKILLS = path.join(CLAUDE, 'skills');
 const AGENTS = path.join(CLAUDE, 'agents');
 const PLUGINS = path.join(CLAUDE, 'plugins');
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+// 버전은 package.json 단일 출처에서 읽는다(코드에 하드코딩한 버전이 어긋나지 않게).
+let VERSION = '0.0.0';
+try { VERSION = JSON.parse(fs.readFileSync(path.join(SCRIPT_DIR, 'package.json'), 'utf8')).version || VERSION; } catch {}
+
+// --json 출력은 로컬 경로·설치된 스킬 설명을 담는다 → 공유 전 확인하라는 경고를 함께 싣는다.
+const JSON_WARNING = '이 JSON 은 로컬 경로(skillsPath)와 설치된 스킬 이름·설명을 포함합니다. 공유 전 개인 정보를 확인하세요.';
 
 // --save <name>: stdin 으로 받은 워크플로우 JSON 을 사용자 파일에 저장(쓰기는 여기 한 곳만).
 if (process.argv.includes('--save')) {
@@ -74,7 +82,8 @@ if (process.argv.includes('--delete')) {
 if (!fs.existsSync(SKILLS) && !process.argv.includes('--workflows')) {
   if (process.argv.includes('--json')) {
     console.log(JSON.stringify({
-      version: '0.2.0',
+      version: VERSION,
+      _warning: JSON_WARNING,
       environment: { hasClaude: false, skillsPath: SKILLS, mirrorsFolded: 0 },
       counts: { total: 0, plugins: 0, agents: 0 },
       plugins: [], skills: [], groups: [],
@@ -174,20 +183,22 @@ if (process.argv.includes('--workflows')) {
 
 // ── --json: 구조화된 스킬 인벤토리 (추천기·워크플로우의 기반) ──
 if (process.argv.includes('--json')) {
-  const penabled = Object.fromEntries(plugins.map(p => [p.short, p.enabled !== false]));
+  // 출처 라벨(충돌 시 short@market 로 구분된 label)로 켜짐 여부를 색인 — items 의 source 와 같은 키.
+  const penabled = Object.fromEntries(plugins.map(p => [p.label, p.enabled !== false]));
   const bySrc = {}; for (const it of uniq) bySrc[it.source] = (bySrc[it.source] || 0) + 1;
   const out = {
-    version: '0.2.0',
+    version: VERSION,
+    _warning: JSON_WARNING,
     environment: { hasClaude: fs.existsSync(SKILLS), skillsPath: SKILLS, mirrorsFolded: mirrorFiles },
     counts: { total: uniq.length, ...bySrc, plugins: plugins.length, agents: agentCount },
-    plugins: plugins.map(p => ({ name: p.short, enabled: p.enabled !== false, skillCount: p.count })),
+    plugins: plugins.map(p => ({ name: p.label, fullKey: p.key, enabled: p.enabled !== false, skillCount: p.count })),
     skills: uniq.map(it => ({
       id: it.source + ':' + it.name,
       name: it.name,
       source: it.source,
       description: it.desc || '',
       enabled: it.source in penabled ? penabled[it.source] : true,
-      capabilities: capsOf(it.name),
+      capabilities: capsOfItem(it),
     })),
     groups,
   };
