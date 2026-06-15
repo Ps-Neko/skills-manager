@@ -15,6 +15,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readEnabledPlugins } from './claude-env.js';
 
@@ -260,17 +261,26 @@ export function resolveStandaloneTarget(name) {
   return { ok: true, folderName, dir, realTarget };
 }
 
-// 제거 수행. confirm 없으면 dry-run(미리보기). confirm===토큰(=폴더명)일 때만 휴지통으로 이동.
+// 확인 토큰 = 대상 realpath + 잔여물(영향) 요약의 sha256 앞 10자.
+// 공개 폴더명이 아니라 dry-run/residue 를 실제로 돌려야 얻는 값 → ① --judge 만 읽은(오염된) LLM 이
+// 토큰을 자가구성해 곧장 삭제하는 걸 막고 ② 삭제 전 영향 미리보기를 강제한다.
+// 결정적이라 상태 저장 없이 confirm 단계에서 동일하게 재계산해 대조한다(dry-run 은 읽기 전용 유지).
+function removeToken(realTarget, surfaces) {
+  return crypto.createHash('sha256').update(realTarget + '\n' + JSON.stringify(surfaces)).digest('hex').slice(0, 10);
+}
+
+// 제거 수행. confirm 없으면 dry-run(미리보기). confirm===토큰일 때만 휴지통으로 이동.
 export function removeStandalone(name, { confirm } = {}) {
   const t = resolveStandaloneTarget(name);
   if (!t.ok) return t;
-  const token = t.folderName;                 // 확인 토큰 = 폴더명(이름을 그대로 다시 입력해 확인 — 결정적)
   const isGit = isDir(path.join(t.dir, '.git'));
   const res = residue(name);                  // 잔여물 미리보기(읽기 전용)
+  const token = removeToken(t.realTarget, res.surfaces);
   if (confirm == null) {
     return { ok: true, mode: 'dry-run', target: name, folder: t.dir, isGit, willMoveTo: TRASH, confirmToken: token, residue: res.surfaces };
   }
-  if (confirm !== token) return { ok: false, reason: 'token-mismatch', expected: token };
+  // 정답 토큰은 절대 에러에 싣지 않는다(틀린 confirm 으로 토큰을 캐가는 자가구성 차단).
+  if (confirm !== token) return { ok: false, reason: 'token-mismatch', hint: '먼저 --remove <이름> (확인 없이)으로 미리보기를 띄워 확인 토큰을 받으세요.' };
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   let dest;
   try {

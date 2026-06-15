@@ -15,6 +15,7 @@ import { scanInventory } from './scanner.js';
 import { capsOfItem, classify } from './classifier.js';
 import { buildHumanReport, buildJudgePacket } from './view-model.js';
 import { dispWidth, padW, renderReport, renderJudgePacket } from './render.js';
+import { stripCtl } from './sanitize.js';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
@@ -128,23 +129,24 @@ if (process.argv.includes('--set-skill')) {
   const skillId = (skillRaw === 'none' || skillRaw === 'null' || skillRaw === '') ? null : skillRaw;
   const installedIds = uniq.map((it) => it.source + ':' + it.name);
   if (skillId !== null && !installedIds.includes(skillId)) {
-    console.log(`주의: '${skillId}'는 지금 안 깔린 스킬이에요. 그래도 박았어요(실행 때 '실종'으로 보일 수 있음).`);
+    console.log(`주의: '${stripCtl(skillId)}'는 지금 안 깔린 스킬이에요. 그래도 박았어요(실행 때 '실종'으로 보일 수 있음).`);
   }
   const res = setStepSkill(name, stepNum, skillId);
   if (!res.ok) {
     const why = {
       'invalid-name': '이름이 올바르지 않아요(영숫자·한글·-·_ 1~40자).',
+      'invalid-skill': '스킬 id 에 쓸 수 없는 문자(제어문자)가 있어요. 정상 스킬 id 로 다시 시도하세요.',
       'reserved': "내장 템플릿은 못 고쳐요. 먼저 'save'로 내 흐름으로 복제한 뒤 고치세요.",
       'not-found': `내 워크플로우에 없어요: ${name} (내장은 'workflow list'에서 확인 — 고치려면 먼저 복제).`,
       'bad-step': `단계 번호가 범위를 벗어났어요: ${stepNum} (이 흐름은 1~${res.stepCount}단계).`,
     }[res.reason] || res.reason;
     console.log(`수정 실패: ${why}`);
     if (res.reason === 'bad-step' && res.steps && res.steps.length) {
-      console.log(`  이 흐름의 단계: ${res.steps.map((s) => `${s.n} ${s.label}`).join(' · ')}`);
+      console.log(`  이 흐름의 단계: ${res.steps.map((s) => `${s.n} ${stripCtl(s.label)}`).join(' · ')}`);
     }
     process.exit(1);
   }
-  console.log(`고쳤어요: ${name}의 ${stepNum}단계(${res.capability}) 스킬을 '${res.skill ?? '비움'}'로 설정.`);
+  console.log(`고쳤어요: ${name}의 ${stepNum}단계(${stripCtl(res.capability)}) 스킬을 '${stripCtl(res.skill ?? '비움')}'로 설정.`);
   process.exit(0);
 }
 
@@ -164,18 +166,21 @@ if (process.argv.includes('--workflows')) {
     console.log('\n워크플로우 목록 (단계별 쓸 스킬):');
     // 라벨 열 폭은 실제 라벨들의 최대 표시폭+2 로 — 라벨이 길어져도 'N곳' 열이 들쭉날쭉하지 않게.
     const resolved = all.map((w) => ({ w, steps: resolveSteps(w, groupsByCap) }));
-    const LW = Math.max(2, ...resolved.flatMap((r) => r.steps.map((s) => dispWidth(s.resolved.label)))) + 2;
+    const LW = Math.max(2, ...resolved.flatMap((r) => r.steps.map((s) => dispWidth(stripCtl(s.resolved.label))))) + 2;
     for (const { w, steps } of resolved) {
       const tag = w.source === 'user' ? '내 것' : '내장';
-      console.log(`\n[${w.label} · ${w.name}]  (${tag})`);
+      // 출처(sources=플러그인 라벨)는 installed_plugins.json 발 제3자 입력이라 출력 전 정화.
+      // label·skill 은 입구(workflow-store)에서 이미 정화되지만, 구버전 파일 대비 심층방어로 한 번 더.
+      console.log(`\n[${stripCtl(w.label)} · ${stripCtl(w.name)}]  (${tag})`);
       steps.forEach((s, i) => {
         const r = s.resolved;
+        const label = stripCtl(r.label);
         let col;
-        if (r.kind === 'pinned') col = `고정: ${r.skills[0]}`;
+        if (r.kind === 'pinned') col = `고정: ${stripCtl(r.skills[0])}`;
         else if (r.kind === 'none') col = '기본 Claude로 (전담 스킬 없음)';
-        else if (r.count === 1) col = `1곳 — ${r.sources[0]}`;
-        else col = `${r.count}곳 겹침 — ${r.sources.join('·')}`;
-        console.log(`  ${String(i + 1).padStart(2)}  ${padW(r.label, LW)}${col}`);
+        else if (r.count === 1) col = `1곳 — ${stripCtl(r.sources[0])}`;
+        else col = `${r.count}곳 겹침 — ${stripCtl(r.sources.join('·'))}`;
+        console.log(`  ${String(i + 1).padStart(2)}  ${padW(label, LW)}${col}`);
       });
     }
     console.log('\n표의 "N곳"은 넓게 잡은 수예요 — 역할이 다른 건 추천·실행 때 추려 드려요.');
