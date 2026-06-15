@@ -78,8 +78,11 @@ if (process.argv.includes('--delete')) {
 }
 
 // ~/.claude/skills 가 없으면 스캔할 게 없음 — 친절히 안내하고 끝(크래시 방지).
-// 단 --workflows 는 인벤토리가 비어도 워크플로우 목록은 보여줘야 하므로 통과시킨다.
-if (!fs.existsSync(SKILLS) && !process.argv.includes('--workflows')) {
+// 단 워크플로우 스토어 작업(--workflows·--get·--set-skill)은 스킬 폴더와 무관하게
+// 워크플로우 파일만 다루므로 인벤토리가 비어도 통과시킨다(인벤토리는 '설치됨' 표시에만 쓰고,
+// 없으면 빈 인벤토리로 진행). 이걸 빠뜨리면 ~/.claude/skills 없는 환경(CI 등)에서 조기 종료한다.
+const WORKFLOW_STORE_OPS = ['--workflows', '--get', '--set-skill'];
+if (!fs.existsSync(SKILLS) && !WORKFLOW_STORE_OPS.some((f) => process.argv.includes(f))) {
   if (process.argv.includes('--json')) {
     console.log(JSON.stringify({
       version: VERSION,
