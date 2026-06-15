@@ -261,12 +261,17 @@ export function resolveStandaloneTarget(name) {
   return { ok: true, folderName, dir, realTarget };
 }
 
-// 확인 토큰 = 대상 realpath + 잔여물(영향) 요약의 sha256 앞 10자.
-// 공개 폴더명이 아니라 dry-run/residue 를 실제로 돌려야 얻는 값 → ① --judge 만 읽은(오염된) LLM 이
-// 토큰을 자가구성해 곧장 삭제하는 걸 막고 ② 삭제 전 영향 미리보기를 강제한다.
-// 결정적이라 상태 저장 없이 confirm 단계에서 동일하게 재계산해 대조한다(dry-run 은 읽기 전용 유지).
+// 확인 토큰 = 대상 realpath + 폴더 fs-상태(inode·mtime·size) + 잔여물(영향) 요약의 sha256 앞 10자.
+// 노리는 성질: ① 공개 폴더명이 아닐 것 ② 공개 `--json` 출력(skillsPath·스킬 id)만으로는 못 지어낼 것
+//   — inode·mtime 은 --json 에 없고 실제 폴더를 stat 해야 안다 ③ 틀린 confirm 에 토큰을 안 흘릴 것
+//   ④ 미리본 영향(residue)에 묶여 상태가 바뀌면 토큰도 바뀔 것.
+// 결정적이라 상태 저장 없이 confirm 에서 재계산해 대조한다(dry-run 은 읽기 전용 유지).
+// ※ 한계: 셸 접근이 있는(오염된) 호스트는 폴더를 직접 stat 해 토큰을 계산할 수 있다 — 그래서 파괴적
+//   제거의 최종 게이트는 토큰이 아니라 '사람의 명시 승인'이다(SKILL.md · OWASP LLM06). 토큰은 보조 방어.
 function removeToken(realTarget, surfaces) {
-  return crypto.createHash('sha256').update(realTarget + '\n' + JSON.stringify(surfaces)).digest('hex').slice(0, 10);
+  let id = '';
+  try { const st = fs.statSync(realTarget); id = `${st.ino}\n${st.mtimeMs}\n${st.size}`; } catch {}
+  return crypto.createHash('sha256').update(realTarget + '\n' + id + '\n' + JSON.stringify(surfaces)).digest('hex').slice(0, 10);
 }
 
 // 제거 수행. confirm 없으면 dry-run(미리보기). confirm===토큰일 때만 휴지통으로 이동.
