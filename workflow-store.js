@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { stripCtl, hasCtl } from './sanitize.js';
 
 // 내장 5개 템플릿 이름 = 예약(덮어쓰기 금지).
 export const RESERVED = new Set(['app-dev', 'bugfix', 'release-check', 'code-review', 'refactor']);
@@ -16,11 +17,13 @@ export function validName(name) {
 
 // 단계 구조 검증 — 저장은 유일한 '쓰기'라 깨진 단계를 막는다.
 // { capability: 문자열, skill: 문자열|null, note: 문자열|null }
+// capability·skill·note 는 제어문자(ANSI 이스케이프)를 금지 — 저장된 값이 나중에 --workflows·--get
+// 출력으로 터미널/호스트 LLM 에 새는 걸 입구에서 막는다(식별자엔 제어문자가 정당한 쓰임이 없다).
 export function validStep(s) {
   return !!s && typeof s === 'object'
-    && typeof s.capability === 'string'
-    && (s.skill == null || typeof s.skill === 'string')
-    && (s.note == null || typeof s.note === 'string');
+    && typeof s.capability === 'string' && !hasCtl(s.capability)
+    && (s.skill == null || (typeof s.skill === 'string' && !hasCtl(s.skill)))
+    && (s.note == null || (typeof s.note === 'string' && !hasCtl(s.note)));
 }
 
 // 사용자 파일은 스킬 폴더 밖 — 재설치(폴더 덮어쓰기)에도 안 날아간다.
@@ -59,7 +62,8 @@ export function saveWorkflow(name, workflow, file = defaultUserFile()) {
   const steps = (workflow && workflow.steps) || [];
   if (!Array.isArray(steps) || !steps.every(validStep)) return { ok: false, reason: 'invalid-steps' };
   const list = loadUser(file);
-  const wf = { name, label: (workflow && workflow.label) || name, steps };
+  // label 은 자유 표시 텍스트 — 거부 대신 제어문자만 떼어 저장(터미널 스푸핑 방지, 정상 라벨은 무변).
+  const wf = { name, label: stripCtl((workflow && workflow.label) || name), steps };
   const idx = list.findIndex((w) => w.name === name);
   const overwritten = idx >= 0;
   if (overwritten) list[idx] = wf;
@@ -93,6 +97,7 @@ export function listAll(builtin, user) {
 export function setStepSkill(name, stepIndex, skillId, file = defaultUserFile()) {
   if (!validName(name)) return { ok: false, reason: 'invalid-name' };
   if (RESERVED.has(name)) return { ok: false, reason: 'reserved' };
+  if (skillId != null && hasCtl(String(skillId))) return { ok: false, reason: 'invalid-skill' };
   const list = loadUser(file);
   const wf = list.find((w) => w.name === name);
   if (!wf) return { ok: false, reason: 'not-found' };

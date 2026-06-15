@@ -5,7 +5,8 @@
 const isWide = (cp) => (cp >= 0x1100 && cp <= 0x115F) || (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6);
 export const dispWidth = (s) => [...s].reduce((w, ch) => w + (isWide(ch.codePointAt(0)) ? 2 : 1), 0);
 export const padW = (s, w) => s + ' '.repeat(Math.max(1, w - dispWidth(s)));
-export const shortKo = (s) => ({ user: '직접', '.agents': '.agents' })[s] || s;
+// 출처 라벨: 알려진 키는 한국어로, 그 외(플러그인 라벨=제3자 입력)는 제어문자를 떼어 반환(ANSI 스푸핑 방지).
+export const shortKo = (s) => ({ user: '직접', '.agents': '.agents' })[s] || stripCtl(s);
 
 // 겹침을 '곳 수' 내림차순(동순위는 입력 순서 보존 = 안정). 원본 비변형.
 export function sortedConflicts(conflicts) {

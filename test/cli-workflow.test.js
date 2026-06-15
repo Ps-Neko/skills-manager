@@ -223,3 +223,20 @@ test('--workflows(글자): 스킬 폴더 없는 환경도 안 죽고, 단계 라
   // 단계 행(번호 + 라벨)에 영어 cap 토큰이 라벨로 새지 않아야(헤더 슬러그는 제외).
   assert.doesNotMatch(out, /\n\s*\d+\s+(brainstorm|spec|plan|tdd|review|debug|security|ship|simplify)\s/, '단계 라벨에 영어 cap 노출 금지');
 });
+
+test('--workflows: 구버전 파일에 박힌 제어문자(ANSI)도 출력 전 정화(심층방어)', () => {
+  // saveWorkflow 입력검증을 우회해 직접 기록 = 이 fix 이전에 저장된 오염 파일을 모사.
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-poison-'));
+  const ESC = String.fromCharCode(27);
+  const poisoned = { version: 1, workflows: [{
+    name: 'legacy' + ESC + '[2K', label: 'Old' + ESC + '[2KFlow',
+    steps: [
+      { capability: 'review', skill: 'user:x' + ESC + '[31mSPOOF', note: '' },
+      { capability: 'weird' + ESC + '[33m', skill: null, note: '' },
+    ],
+  }] };
+  fs.writeFileSync(path.join(home, 'skills-manager-workflows.json'), JSON.stringify(poisoned));
+  const out = run(['--workflows'], { home });
+  assert.ok(!out.includes(ESC), '--workflows 사람 출력에 ESC 가 남지 않아야 함');
+  assert.match(out, /legacy/, '워크플로우 자체는 보임');
+});

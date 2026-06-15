@@ -37,25 +37,36 @@ function runFail(args, home) {
   try { run(args, home); return null; } catch (e) { return e; }
 }
 
-test('--remove dry-run: 폴더를 안 옮기고 확인 토큰을 돌려준다', () => {
+test('--remove dry-run: 폴더를 안 옮기고 확인 토큰(폴더명 아님)을 돌려준다', () => {
   const { home, dir } = homeWithSkill();
   const out = JSON.parse(run(['--remove', 'victim'], home));
   assert.strictEqual(out.mode, 'dry-run');
-  assert.strictEqual(out.confirmToken, 'victim');
+  assert.match(out.confirmToken, /^[0-9a-f]{10}$/, '토큰은 내용 해시(폴더명 아님)');
+  assert.notStrictEqual(out.confirmToken, 'victim', '공개 폴더명이 그대로 토큰이면 안 됨');
   assert.ok(fs.existsSync(dir), 'dry-run 은 폴더를 그대로 둠');
 });
 
-test('--remove --confirm 틀린 토큰: 거부, 폴더 보존', () => {
+test('--remove 토큰은 결정적: 같은 상태면 두 dry-run 이 같은 토큰(상태 저장 없이 confirm 재계산)', () => {
+  const { home } = homeWithSkill();
+  const a = JSON.parse(run(['--remove', 'victim'], home)).confirmToken;
+  const b = JSON.parse(run(['--remove', 'victim'], home)).confirmToken;
+  assert.strictEqual(a, b);
+});
+
+test('--remove --confirm 틀린 토큰: 거부·폴더 보존·정답 토큰 비노출(자가구성 차단)', () => {
   const { home, dir } = homeWithSkill();
   const e = runFail(['--remove', 'victim', '--confirm', 'WRONG'], home);
   assert.ok(e && e.status === 1, '비0 종료');
-  assert.strictEqual(JSON.parse(e.stdout).reason, 'token-mismatch');
+  const out = JSON.parse(e.stdout);
+  assert.strictEqual(out.reason, 'token-mismatch');
+  assert.ok(!('expected' in out), '에러에 정답 토큰을 흘리지 않음');
   assert.ok(fs.existsSync(dir), '틀린 토큰엔 폴더 보존');
 });
 
-test('--remove --confirm 맞는 토큰: 휴지통으로 이동 + 감사 로그', () => {
+test('--remove --confirm 맞는 토큰(dry-run 으로 받은): 휴지통으로 이동 + 감사 로그', () => {
   const { home, dir } = homeWithSkill();
-  const out = JSON.parse(run(['--remove', 'victim', '--confirm', 'victim'], home));
+  const dry = JSON.parse(run(['--remove', 'victim'], home));   // 먼저 미리보기로 토큰 획득(강제)
+  const out = JSON.parse(run(['--remove', 'victim', '--confirm', dry.confirmToken], home));
   assert.strictEqual(out.mode, 'removed');
   assert.ok(!fs.existsSync(dir), '원본 폴더는 사라짐(이동)');
   const trash = path.join(home, '.claude', '.skills-manager-trash');
