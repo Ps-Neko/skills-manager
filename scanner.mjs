@@ -3,6 +3,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { readEnabledPlugins } from './claude-env.mjs';
 
 // gstack 가 9개 surface 폴더에 사본을 미러 → 접어서 안 센다
 const SURFACE = new Set(['.cursor', '.factory', '.kiro', '.hermes', '.gbrain', '.slate', '.opencode', '.openclaw', '.agents']);
@@ -10,13 +11,37 @@ const IGNORE = new Set(['.git', '.github', 'node_modules', '.skill-janitor-archi
 
 const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } }; // statSync = 심링크 따라감
 
-function readFM(file) {
+// frontmatter 에서 name·description 을 읽는다(의존성 0 최소 파서).
+// 단일행 값은 물론, 흔한 여러 줄 description — YAML block scalar(>, |)와 값이 빈 채
+// 다음 줄들이 들여써진 경우 — 까지 잇는다. 따옴표 안 콜론("foo: bar")도 안전.
+export function readFM(file) {
   let t; try { t = fs.readFileSync(file, 'utf8'); } catch { return {}; }
   const m = t.match(/^﻿?---\s*\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return {};
-  const fm = m[1];
-  const grab = (k) => (fm.match(new RegExp('^' + k + ':\\s*(.+)$', 'm')) || [])[1];
-  const clean = (s) => (s ? s.trim().replace(/^["']|["']$/g, '').trim() : '');
+  const lines = m[1].split(/\r?\n/);
+  const indented = (l) => /^\s+\S/.test(l);
+  const grab = (key) => {
+    for (let i = 0; i < lines.length; i++) {
+      const mm = lines[i].match(new RegExp('^' + key + ':[ \\t]*(.*)$'));
+      if (!mm) continue;
+      const val = mm[1];
+      // block scalar(>, | + 선택적 chomping)면 뒤따르는 들여쓴 줄들을 모아 한 문장으로.
+      if (/^[|>][+-]?\s*$/.test(val.trim())) {
+        const block = [];
+        for (let j = i + 1; j < lines.length && (indented(lines[j]) || lines[j].trim() === ''); j++) block.push(lines[j].trim());
+        return block.join(' ').replace(/\s+/g, ' ').trim();
+      }
+      // 값이 비고 다음 줄들이 들여써 있으면(드묾) 그 줄들을 잇는다.
+      if (val.trim() === '') {
+        const block = [];
+        for (let j = i + 1; j < lines.length && indented(lines[j]); j++) block.push(lines[j].trim());
+        if (block.length) return block.join(' ').replace(/\s+/g, ' ').trim();
+      }
+      return val;
+    }
+    return undefined;
+  };
+  const clean = (s) => (s ? String(s).trim().replace(/^["']|["']$/g, '').trim() : '');
   return { name: clean(grab('name')), description: clean(grab('description')) };
 }
 
@@ -67,22 +92,27 @@ export function scanInventory({ SKILLS, CLAUDE, PLUGINS, AGENTS }) {
   }
 
   // (3) 플러그인 (installed_plugins.json 의 installPath = 진실원)
-  const enabled = {};
-  for (const f of ['settings.json', 'settings.local.json']) {
-    try { const j = JSON.parse(fs.readFileSync(path.join(CLAUDE, f), 'utf8')); Object.assign(enabled, j.enabledPlugins || {}); } catch {}
-  }
+  // enabledPlugins 는 claude-env 의 공유 리더로 — manage-scan 과 같은 규칙(settings + local 병합).
+  const enabled = readEnabledPlugins(CLAUDE);
   const plugins = [];
   try {
     const ip = JSON.parse(fs.readFileSync(path.join(PLUGINS, 'installed_plugins.json'), 'utf8'));
-    for (const key of Object.keys(ip.plugins || {})) {
+    const keys = Object.keys(ip.plugins || {});
+    // 출처 라벨은 보통 short(키의 @앞)지만, 같은 short 가 다른 마켓에서 둘 이상 들어오면
+    // 합쳐져 보이는 버그가 난다 → 그 경우에만 마켓을 붙여 구분(충돌 없으면 깔끔한 short 그대로).
+    const shortCount = {};
+    for (const key of keys) { const s = key.split('@')[0]; shortCount[s] = (shortCount[s] || 0) + 1; }
+    const labelOf = (key) => { const [short, market] = key.split('@'); return shortCount[short] > 1 && market ? `${short}@${market}` : short; };
+    for (const key of keys) {
       const short = key.split('@')[0];
+      const label = labelOf(key);
       const inst = ip.plugins[key]?.[0]?.installPath;
       const pmap = new Map();
       if (inst && fs.existsSync(inst)) {
         (function collect(d) { let es; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { return; } for (const e of es) { if (e.isDirectory()) { if (SURFACE.has(e.name) || IGNORE.has(e.name)) continue; collect(path.join(d, e.name)); } else if (e.name === 'SKILL.md') { const fm = readFM(path.join(d, 'SKILL.md')); const nm = fm.name || path.basename(d); if (!pmap.has(nm)) pmap.set(nm, fm.description || ''); } } })(inst);
       }
-      plugins.push({ key, short, enabled: enabled[key], count: pmap.size });
-      for (const [nm, d] of pmap) items.push({ name: nm, source: short, desc: d });
+      plugins.push({ key, short, label, enabled: enabled[key], count: pmap.size });
+      for (const [nm, d] of pmap) items.push({ name: nm, source: label, desc: d });
     }
   } catch {}
 

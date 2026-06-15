@@ -20,31 +20,39 @@ Claude Code랑 Cursor에 스킬을 계속 깔다 보니, 어느 순간부터 문
 - 작업명을 입력하면 **단계별 추천 흐름** 생성 (`recommend`)
 - 자주 쓰는 흐름을 **워크플로우로 저장·재사용** (`workflow save`)
 
-판정은 2단계입니다: 키워드로 후보를 넓게 묶고(1단), 그 위에서 LLM이 설명을 읽어 **진짜 중복인지 / 역할만 다른지**(예: `plan-ceo-review` ≠ `plan-eng-review`)를 가립니다(2단).
+판정은 2단계입니다: 키워드로 후보를 넓게 묶고(1단), 그 위에서 LLM이 설명을 읽어 **진짜 중복인지 / 역할만 다른지**(예: `plan-ceo-review` ≠ `plan-eng-review`)를 가립니다(2단). (1단은 스킬 이름·특정 구절 기반이라 아주 특이한 작명은 놓칠 수 있고, 그건 2단 LLM이 설명을 읽어 메웁니다.)
 
 스킬을 **끄거나 지우지 않고**, 설정도 건드리지 않습니다. 먼저 보여주고, 정리할 기준을 만들어줍니다.
 
 ## 안전
-- **검사·추천은 읽기 전용.** 스킬을 끄거나 지우거나 설정을 바꾸지 않습니다.
-- **쓰기는 워크플로우 저장 한 곳뿐** — 내가 저장한 흐름만 `~/.claude/skills-manager-workflows.json`에 씁니다. settings·스킬 폴더·다른 스킬은 안 건드립니다.
-- **스킬 끄기 기능은 없습니다** — 겹친 스킬 대부분이 플러그인 안에 있고, 플러그인은 통째로만 꺼지는 구조적 벽이라(하나 끄려다 고유한 것까지 잃음) 개인 도구로 영구 미구현입니다. 그래서 이 도구는 "보여주는 지도 + 흐름 짜기"까지 합니다.
+- **검사·추천·업데이트/잔여물 탐지는 읽기 전용.** 스캔은 스킬을 끄거나 지우거나 설정을 바꾸지 않습니다.
+- **쓰기는 셋뿐:**
+  1. 워크플로우 저장 파일 `~/.claude/skills-manager-workflows.json` (내가 저장한 흐름만)
+  2. standalone 스킬 폴더 제거 — `--confirm` 확인 후에만, 영구삭제가 아니라 **휴지통(`~/.claude/.skills-manager-trash/`)으로 이동**(복구 가능). realpath로 `~/.claude/skills` 직속 하위만 허용해 심링크 탈출·경로 주입을 막고, 모든 제거를 감사 로그에 남깁니다.
+  3. 그 스킬을 가리키던 워크플로우 핀 정리.
+- **플러그인 안 스킬은 개별 제거가 안 됩니다** — 플러그인은 통째로만 꺼지는 구조적 벽이라(하나 빼려다 고유한 것까지 잃음), 통째 제거는 네이티브 `/plugin uninstall`로 안내만 합니다.
+
+> 휴지통(`~/.claude/.skills-manager-trash/`)과 제거 로그(`removals.log.jsonl`)는 자동으로 비워지지 않습니다 — 복구가 끝났으면 직접 비우세요.
 
 ## 설치
-이 폴더를 Claude Code 스킬 위치에 둡니다:
+**폴더째 복사하거나 clone** 하세요. 개별 파일만 복사하면 안 됩니다 — 모듈과 보조 스크립트가 서로를 불러옵니다(`scan.mjs` 단독으로는 동작하지 않음).
+```
+git clone https://github.com/Ps-Neko/skills-manager.git ~/.claude/skills/skills-manager
+```
+폴더 구성(전부 함께 있어야 함):
 ```
 ~/.claude/skills/skills-manager/
-   ├─ SKILL.md
+   ├─ SKILL.md             # 호스트 LLM 절차서(검사·추천·워크플로우·관리)
    ├─ scan.mjs             # 진입점 — 아래 모듈들을 불러 실행
-   ├─ scanner.mjs          # scan.mjs 가 import — 빠지면 실행 시 깨짐
-   ├─ classifier.mjs       # scan.mjs 가 import — 빠지면 실행 시 깨짐
-   ├─ view-model.mjs       # scan.mjs 가 import — 빠지면 실행 시 깨짐
-   ├─ render.mjs           # scan.mjs 가 import — 빠지면 실행 시 깨짐
-   ├─ workflow-store.mjs   # 워크플로우 저장/조회 — scan.mjs 가 import
-   └─ workflows.json       # 내장 워크플로우 템플릿
-```
-**여덟 파일을 함께** 두어야 합니다(`scan.mjs` 단독으로는 안 돕니다 — `scanner`·`classifier`·`view-model`·`render`·`workflow-store` 를 불러옵니다). 가장 확실한 건 **폴더째 복사하거나 clone** 하는 것입니다:
-```
-git clone https://github.com/Ps-Neko/skills-manager.git
+   ├─ scanner.mjs          # 인벤토리 수집(읽기 전용)
+   ├─ classifier.mjs       # capability 판정·겹침 그룹
+   ├─ view-model.mjs       # 출력 정책
+   ├─ render.mjs           # 문자열 렌더링
+   ├─ workflow-store.mjs   # 워크플로우 저장/조회
+   ├─ claude-env.mjs       # ~/.claude 설정 공유 리더
+   ├─ manage-scan.mjs      # 관리 보조(업데이트·잔여물 탐지·standalone 제거)
+   ├─ workflows.json       # 내장 워크플로우 템플릿
+   └─ package.json         # Node 18+ · 의존성 0 · node --test
 ```
 
 ## 사용
@@ -77,13 +85,16 @@ Skills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)
 세로 전체 목록·묶음별 분포·기본 묶음 근거·끄기 설명은 `node scan.mjs --all`로 봅니다.
 
 ## 요구사항
-- Node.js (의존성 0)
+- Node.js 18+ (의존성 0). 테스트: `node --test`.
+
+> ⚠️ `node scan.mjs --json` 출력은 로컬 경로(`skillsPath`)와 설치된 스킬 이름·설명을 포함합니다 — 공유 전 개인 정보를 확인하세요(출력에도 `_warning`으로 표시됩니다).
 
 ## 상태
 - **검사 (지도)** — 있음: 스캔 → 겹친 지도 → 2단 판정 (읽기 전용)
 - **추천** — 있음: 작업을 단계 흐름으로 펴고, 단계마다 하나씩
 - **워크플로우 저장/실행** — 있음: 내 흐름을 이름 붙여 저장·재사용 (저장 파일에만 씀)
-- **스킬 끄기** — 없음(영구 미구현): 플러그인 통째 토글 벽으로 개인 도구에선 반쪽이라
+- **업데이트/잔여물 탐지** — 있음: `manage-scan.mjs`로 업데이트 경로·제거 잔여물 점검 (읽기 전용)
+- **standalone 스킬 제거** — 있음: `--confirm` 확인 후 휴지통으로 이동(복구 가능). 플러그인 안 스킬은 개별 제거 불가(네이티브 `/plugin`).
 
 **스킬이 많아졌다면, 이제는 더 깔기 전에 한 번 쓸어볼 때입니다.**
 Skills Manager — 내 스킬 환경을 한눈에 정리하는 읽기 전용 중복 점검 도구. 개인용 도구입니다. 피드백 환영.

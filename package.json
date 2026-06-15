@@ -1,7 +1,7 @@
 {
   "name": "skills-manager",
-  "version": "0.3.0",
-  "description": "Skills Manager — 설치된 스킬의 중복 지도 + 워크플로우 (읽기 전용 개인 도구)",
+  "version": "0.4.0",
+  "description": "Skills Manager — 설치된 스킬의 중복 지도 + 워크플로우 + standalone 스킬 안전 제거",
   "type": "module",
   "private": true,
   "license": "MIT",

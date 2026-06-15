@@ -1,20 +1,27 @@
 #!/usr/bin/env node
-// Skills Manager — 관리 보조 (업데이트 점검 · 제거 잔여물 점검). **읽기 전용**.
-// 이 스크립트는 탐지·분류만 한다. 어떤 파일도 쓰거나 지우지 않는다.
-// 실제 정리(워크플로우 핀 제거)·폴더 삭제·플러그인 제거는 호출자(LLM)가
-// 사용자 확인을 받은 뒤 기존 도구(scan.mjs --set-skill, 확인된 삭제, /plugin)로 수행한다.
+// Skills Manager — 관리 보조 (업데이트 점검 · 잔여물 탐지 · standalone 스킬 제거).
+// 탐지·분류(--update-status, --residue)는 읽기 전용이다.
+// 유일한 쓰기 = --remove --confirm: **확인된** standalone 스킬 폴더를 휴지통으로 옮긴다(영구삭제 아님).
+//   안전장치: realpath 로 ~/.claude/skills 직속 하위만 허용(심링크 탈출·경로 주입 방어),
+//   기본은 dry-run(미리보기), --confirm <토큰> 일 때만 실행, 모든 제거를 감사 로그에 남긴다.
+//   플러그인 안 스킬은 개별 삭제 불가 → 네이티브 /plugin 안내만. 워크플로우 핀 정리는 scan.mjs --set-skill.
 //
 // 사용법:
-//   node manage-scan.mjs --update-status        설치 스킬의 업데이트 경로 분류(JSON)
-//   node manage-scan.mjs --residue <스킬이름>    그 스킬이 박힌 잔여물 자리 전부 탐지(JSON)
+//   node manage-scan.mjs --update-status              설치 스킬의 업데이트 경로 분류(JSON, 읽기 전용)
+//   node manage-scan.mjs --residue <스킬이름>          그 스킬이 박힌 잔여물 자리 전부 탐지(JSON, 읽기 전용)
+//   node manage-scan.mjs --remove <스킬이름>           삭제 미리보기(dry-run) — 무엇이 휴지통으로 갈지 + 확인 토큰
+//   node manage-scan.mjs --remove <스킬이름> --confirm <토큰>   확인된 제거(휴지통으로 이동)
 
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { readEnabledPlugins } from './claude-env.mjs';
 
 const CLAUDE = path.join(os.homedir(), '.claude');
 const SKILLS = path.join(CLAUDE, 'skills');
+const TRASH = path.join(CLAUDE, '.skills-manager-trash');
+const REMOVAL_LOG = path.join(TRASH, 'removals.log.jsonl');
 
 const readJSON = (p) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
 const exists = (p) => { try { fs.accessSync(p); return true; } catch { return false; } };
@@ -76,8 +83,9 @@ function updateStatus() {
       remote: g.remote,
     };
   });
-  const settings = readJSON(path.join(CLAUDE, 'settings.json')) || {};
-  const plugins = Object.entries(settings.enabledPlugins || {}).map(([name, enabled]) => ({ name, enabled: !!enabled }));
+  // 일반 스캔(scanner.mjs)과 같은 규칙으로 settings.json + settings.local.json 을 병합해 읽는다.
+  const enabledMap = readEnabledPlugins(CLAUDE);
+  const plugins = Object.entries(enabledMap).map(([name, enabled]) => ({ name, enabled: !!enabled }));
   const gitCount = standalone.filter((s) => s.kind === 'git').length;
   return {
     standalone,
@@ -191,7 +199,7 @@ function residue(target) {
   // (2) 플러그인 소속 스킬 — 개별 제거 불가, 현실적 선택지 안내
   const owner = findOwningPlugin(folderName);
   if (owner) {
-    const enabled = !!((settings && settings.enabledPlugins) || {})[owner.id];
+    const enabled = !!readEnabledPlugins(CLAUDE)[owner.id];
     return {
       target,
       location: 'plugin',
@@ -225,6 +233,59 @@ function residue(target) {
   };
 }
 
+// ── standalone 스킬 제거(유일한 쓰기) ─────────────────────────────────────────
+// 안전 검증: 대상은 반드시 ~/.claude/skills 의 **직속 하위 실제 디렉터리**여야 한다.
+// realpath 로 심링크를 풀어 경계 밖(또는 심링크 대상)으로 새지 않는지 확인한다(경로 주입·심링크 탈출 방어).
+// 제거 보호: 컨테이너 폴더(learned/imported)·관리 도구 자신·언더스코어(보관/비활성) 폴더는 통째 이동 금지.
+// (learned/imported 의 개별 스킬은 한 단계 더 깊어 어차피 not-standalone 으로 거부되지만, 컨테이너 자체를 막아 대량 이동을 차단.)
+const PROTECTED_REMOVE = new Set(['learned', 'imported', 'skills-manager']);
+
+export function resolveStandaloneTarget(name) {
+  const folderName = name.includes(':') ? name.split(':').pop() : name; // 'plugin:skill' 형태면 폴더명은 뒤쪽
+  if (!folderName || folderName.includes('/') || folderName.includes('\\') || folderName.includes('..') || folderName.startsWith('.')) {
+    return { ok: false, reason: 'bad-name' }; // 경로 문자·..·숨김(.) 이름 거부
+  }
+  if (folderName.startsWith('_') || PROTECTED_REMOVE.has(folderName)) {
+    return { ok: false, reason: 'protected', folderName }; // 컨테이너·자기 자신·보관 폴더 보호
+  }
+  const dir = path.join(SKILLS, folderName);
+  if (!isDir(dir)) return { ok: false, reason: 'not-standalone', folderName };
+  let realSkills, realTarget;
+  try { realSkills = fs.realpathSync(SKILLS); realTarget = fs.realpathSync(dir); }
+  catch { return { ok: false, reason: 'resolve-failed', folderName }; }
+  // 직속 하위만 허용: realpath 의 부모가 정확히 realSkills (심링크면 대상이 밖이라 여기서 걸림 → 거부).
+  if (path.dirname(realTarget) !== realSkills || realTarget === realSkills) {
+    return { ok: false, reason: 'outside-skills', folderName, realTarget, realSkills };
+  }
+  return { ok: true, folderName, dir, realTarget };
+}
+
+// 제거 수행. confirm 없으면 dry-run(미리보기). confirm===토큰(=폴더명)일 때만 휴지통으로 이동.
+export function removeStandalone(name, { confirm } = {}) {
+  const t = resolveStandaloneTarget(name);
+  if (!t.ok) return t;
+  const token = t.folderName;                 // 확인 토큰 = 폴더명(이름을 그대로 다시 입력해 확인 — 결정적)
+  const isGit = isDir(path.join(t.dir, '.git'));
+  const res = residue(name);                  // 잔여물 미리보기(읽기 전용)
+  if (confirm == null) {
+    return { ok: true, mode: 'dry-run', target: name, folder: t.dir, isGit, willMoveTo: TRASH, confirmToken: token, residue: res.surfaces };
+  }
+  if (confirm !== token) return { ok: false, reason: 'token-mismatch', expected: token };
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  let dest;
+  try {
+    fs.mkdirSync(TRASH, { recursive: true });
+    dest = path.join(TRASH, `${stamp}-${t.folderName}`);
+    for (let n = 1; fs.existsSync(dest); n++) dest = path.join(TRASH, `${stamp}-${t.folderName}-${n}`); // 같은 ms 충돌 회피(덮어쓰기 금지)
+    fs.renameSync(t.dir, dest);              // 영구삭제가 아니라 휴지통으로 이동(복구 가능)
+  } catch (e) {
+    return { ok: false, reason: 'move-failed', error: e.message };
+  }
+  let logged = true;
+  try { fs.appendFileSync(REMOVAL_LOG, JSON.stringify({ ts: stamp, action: 'remove', skill: name, from: t.dir, to: dest }) + '\n'); } catch { logged = false; }
+  return { ok: true, mode: 'removed', target: name, from: t.dir, to: dest, logged, residue: res.surfaces };
+}
+
 const argVal = (flag) => { const i = process.argv.indexOf(flag); return i >= 0 ? process.argv[i + 1] : null; };
 
 if (process.argv.includes('--update-status')) {
@@ -233,8 +294,22 @@ if (process.argv.includes('--update-status')) {
   const name = argVal('--residue');
   if (!name) { console.log(JSON.stringify({ error: '스킬 이름이 필요해요: --residue <스킬이름>' })); process.exit(1); }
   console.log(JSON.stringify(residue(name), null, 2));
+} else if (process.argv.includes('--remove')) {
+  const name = argVal('--remove');
+  if (!name) { console.log(JSON.stringify({ error: '스킬 이름이 필요해요: --remove <스킬이름> [--confirm <토큰>]' })); process.exit(1); }
+  const where = residue(name);
+  if (where.location === 'plugin') {          // 플러그인 안 스킬은 코드로 못 지움 — 네이티브 안내만
+    console.log(JSON.stringify({ ok: false, location: 'plugin', reason: '플러그인 안 스킬은 개별 삭제 불가. /plugin uninstall 로 통째 제거하세요.', removalGuide: where.removalGuide }, null, 2));
+    process.exit(1);
+  }
+  const confirm = process.argv.includes('--confirm') ? (argVal('--confirm') ?? '') : null;
+  const out = removeStandalone(name, { confirm });
+  console.log(JSON.stringify(out, null, 2));
+  process.exit(out.ok ? 0 : 1);
 } else {
-  console.log('Skills Manager 관리 보조 (읽기 전용)');
-  console.log('  node manage-scan.mjs --update-status        업데이트 경로 분류');
-  console.log('  node manage-scan.mjs --residue <스킬이름>    제거 잔여물 자리 탐지');
+  console.log('Skills Manager 관리 보조');
+  console.log('  node manage-scan.mjs --update-status              업데이트 경로 분류 (읽기 전용)');
+  console.log('  node manage-scan.mjs --residue <스킬이름>          제거 잔여물 자리 탐지 (읽기 전용)');
+  console.log('  node manage-scan.mjs --remove <스킬이름>           삭제 미리보기(dry-run)');
+  console.log('  node manage-scan.mjs --remove <스킬이름> --confirm <토큰>   확인된 제거(휴지통 이동)');
 }
