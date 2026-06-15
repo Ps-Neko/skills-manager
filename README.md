@@ -34,12 +34,15 @@ Claude Code랑 Cursor에 스킬을 계속 깔다 보니, 어느 순간부터 문
 ```
 ~/.claude/skills/skills-manager/
    ├─ SKILL.md
-   ├─ scan.mjs
+   ├─ scan.mjs             # 진입점 — 아래 모듈들을 불러 실행
+   ├─ scanner.mjs          # scan.mjs 가 import — 빠지면 실행 시 깨짐
+   ├─ classifier.mjs       # scan.mjs 가 import — 빠지면 실행 시 깨짐
+   ├─ view-model.mjs       # scan.mjs 가 import — 빠지면 실행 시 깨짐
    ├─ render.mjs           # scan.mjs 가 import — 빠지면 실행 시 깨짐
    ├─ workflow-store.mjs   # 워크플로우 저장/조회 — scan.mjs 가 import
    └─ workflows.json       # 내장 워크플로우 템플릿
 ```
-**다섯 파일을 함께** 두어야 합니다(`scan.mjs` 단독으로는 안 돕니다). 또는 clone 후 폴더째 복사:
+**여덟 파일을 함께** 두어야 합니다(`scan.mjs` 단독으로는 안 돕니다 — `scanner`·`classifier`·`view-model`·`render`·`workflow-store` 를 불러옵니다). 가장 확실한 건 **폴더째 복사하거나 clone** 하는 것입니다:
 ```
 git clone https://github.com/Ps-Neko/skills-manager.git
 ```
@@ -67,7 +70,7 @@ Skills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)
 
 `/skills-manager`로 부르면 이 결론 **바로 아래**에 겹침을 한 줄 '띠'로 정리해 줍니다 — 기계가 세로 목록을 안 찍으니 같은 숫자를 두 번 말하지 않습니다:
 ```
-겹친 일 8가지 — 아이디어/브레인스토밍 6(진짜 2) · 코드 리뷰 4(진짜 2) · 디버깅 4 · 테스트 먼저 짜기 (TDD) 3 · 배포/출시 3(진짜 2) · 계획 세우기 2 · 스펙 작성 2 · 보안 점검 2
+겹친 일 8가지 — 아이디어/브레인스토밍 6(같은 일 2) · 코드 리뷰 4(같은 일 2) · 디버깅 4 · 테스트 먼저 짜기 (TDD) 3 · 배포/출시 3(같은 일 2) · 계획 세우기 2 · 스펙 작성 2 · 보안 점검 2
 괄호 안은 역할 다른 걸 빼고 실제로 같은 일만 추린 수.
 ```
 
