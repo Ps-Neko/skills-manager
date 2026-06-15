@@ -105,13 +105,20 @@ export function renderReport({ sections }) {
   return intro.length ? intro.join('\n\n') + '\n\n' + body : body;
 }
 
+// 제3자 스킬 frontmatter(이름·설명)와 출처 라벨은 신뢰 불가 입력 — 터미널에 생짜로 찍기 전 제어문자를 떼어낸다.
+// ANSI 이스케이프(ESC=0x1B)로 출력을 위조(악성 스킬이 판정 패킷에서 자기를 숨김)하거나, 이 패킷을
+// 읽는 호스트 LLM 컨텍스트를 흔드는 걸 막는 출력 인코딩. C0(0x00–0x1F)·DEL(0x7F)·C1(0x80–0x9F)을
+// 공백으로 치환(정상 텍스트엔 제어문자가 없어 영향 0). 개행 잇기는 join 이 따로 하므로 여기서 다 떼도 안전.
+const stripCtl = (s) => String(s ?? '').replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
+
 // 2단 판정 패킷 — buildJudgePacket 이 준 모델을 문자열로.
 export function renderJudgePacket({ conflicts }) {
-  const cut = (s) => (s || '(설명 없음)').replace(/\s+/g, ' ').slice(0, 90);
+  const cut = (s) => stripCtl(s || '(설명 없음)').replace(/\s+/g, ' ').trim().slice(0, 90);
+  const sourceLabel = (s) => SRC_KO[s] || stripCtl(s).replace(/\s+/g, ' ').trim();
   const out = ['────── 판정 패킷 (2단: 설명 읽고 진짜 중복 가려내기) ──────', ''];
   for (const c of conflicts) {
     out.push(`[${c.label}]`);
-    for (const h of c.hits) out.push(`  - ${h.name} (${SRC_KO[h.source] || h.source}): ${cut(h.desc)}`);
+    for (const h of c.hits) out.push(`  - ${stripCtl(h.name)} (${sourceLabel(h.source)}): ${cut(h.desc)}`);
     out.push('');
   }
   return out.join('\n');
