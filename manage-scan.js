@@ -4,19 +4,19 @@
 // 유일한 쓰기 = --remove --confirm: **확인된** standalone 스킬 폴더를 휴지통으로 옮긴다(영구삭제 아님).
 //   안전장치: realpath 로 ~/.claude/skills 직속 하위만 허용(심링크 탈출·경로 주입 방어),
 //   기본은 dry-run(미리보기), --confirm <토큰> 일 때만 실행, 모든 제거를 감사 로그에 남긴다.
-//   플러그인 안 스킬은 개별 삭제 불가 → 네이티브 /plugin 안내만. 워크플로우 핀 정리는 scan.mjs --set-skill.
+//   플러그인 안 스킬은 개별 삭제 불가 → 네이티브 /plugin 안내만. 워크플로우 핀 정리는 scan.js --set-skill.
 //
 // 사용법:
-//   node manage-scan.mjs --update-status              설치 스킬의 업데이트 경로 분류(JSON, 읽기 전용)
-//   node manage-scan.mjs --residue <스킬이름>          그 스킬이 박힌 잔여물 자리 전부 탐지(JSON, 읽기 전용)
-//   node manage-scan.mjs --remove <스킬이름>           삭제 미리보기(dry-run) — 무엇이 휴지통으로 갈지 + 확인 토큰
-//   node manage-scan.mjs --remove <스킬이름> --confirm <토큰>   확인된 제거(휴지통으로 이동)
+//   node manage-scan.js --update-status              설치 스킬의 업데이트 경로 분류(JSON, 읽기 전용)
+//   node manage-scan.js --residue <스킬이름>          그 스킬이 박힌 잔여물 자리 전부 탐지(JSON, 읽기 전용)
+//   node manage-scan.js --remove <스킬이름>           삭제 미리보기(dry-run) — 무엇이 휴지통으로 갈지 + 확인 토큰
+//   node manage-scan.js --remove <스킬이름> --confirm <토큰>   확인된 제거(휴지통으로 이동)
 
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
-import { readEnabledPlugins } from './claude-env.mjs';
+import { readEnabledPlugins } from './claude-env.js';
 
 const CLAUDE = path.join(os.homedir(), '.claude');
 const SKILLS = path.join(CLAUDE, 'skills');
@@ -83,7 +83,7 @@ function updateStatus() {
       remote: g.remote,
     };
   });
-  // 일반 스캔(scanner.mjs)과 같은 규칙으로 settings.json + settings.local.json 을 병합해 읽는다.
+  // 일반 스캔(scanner.js)과 같은 규칙으로 settings.json + settings.local.json 을 병합해 읽는다.
   const enabledMap = readEnabledPlugins(CLAUDE);
   const plugins = Object.entries(enabledMap).map(([name, enabled]) => ({ name, enabled: !!enabled }));
   const gitCount = standalone.filter((s) => s.kind === 'git').length;
@@ -115,7 +115,7 @@ function residue(target) {
         }
       });
     }
-    if (hits.length) add('워크플로우 사용자 핀', uwfPath, hits.join(' · ') + '  → scan.mjs --set-skill <흐름> --step <n> --skill none 으로 정리', '높음');
+    if (hits.length) add('워크플로우 사용자 핀', uwfPath, hits.join(' · ') + '  → scan.js --set-skill <흐름> --step <n> --skill none 으로 정리', '높음');
   }
 
   // 2. 내장 워크플로우 템플릿 (step.skill 핀만 정확히 — 짧은 이름의 부분일치 오탐 방지)
@@ -308,8 +308,8 @@ if (process.argv.includes('--update-status')) {
   process.exit(out.ok ? 0 : 1);
 } else {
   console.log('Skills Manager 관리 보조');
-  console.log('  node manage-scan.mjs --update-status              업데이트 경로 분류 (읽기 전용)');
-  console.log('  node manage-scan.mjs --residue <스킬이름>          제거 잔여물 자리 탐지 (읽기 전용)');
-  console.log('  node manage-scan.mjs --remove <스킬이름>           삭제 미리보기(dry-run)');
-  console.log('  node manage-scan.mjs --remove <스킬이름> --confirm <토큰>   확인된 제거(휴지통 이동)');
+  console.log('  node manage-scan.js --update-status              업데이트 경로 분류 (읽기 전용)');
+  console.log('  node manage-scan.js --residue <스킬이름>          제거 잔여물 자리 탐지 (읽기 전용)');
+  console.log('  node manage-scan.js --remove <스킬이름>           삭제 미리보기(dry-run)');
+  console.log('  node manage-scan.js --remove <스킬이름> --confirm <토큰>   확인된 제거(휴지통 이동)');
 }

@@ -1,4 +1,4 @@
-// test/cli-output.test.mjs — 사람용 기본 출력의 배선(접기/--all/첫 실행) 통합 테스트.
+// test/cli-output.test.js — 사람용 기본 출력의 배선(접기/--all/첫 실행) 통합 테스트.
 import { test } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
-const SCAN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'scan.mjs');
+const SCAN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'scan.js');
 
 // 제어된 가짜 HOME 에 .claude/skills/<한 스킬> 을 깔아 결정적 스캔 환경을 만든다.
 function fixtureHome(skillName = 'solo-skill') {
@@ -56,7 +56,7 @@ test('기본 출력(겹침 있음): 세로 겹침 목록을 안 찍는다(띠는
   assert.match(out, /같은 일이 1가지 겹침/);                   // 결론엔 가짓수
   assert.ok(!/같은 일이 겹친 곳 —/.test(out), '접힘은 세로 목록 머리글을 안 찍음');
   assert.ok(!/· 테스트 먼저 짜기 \(TDD\) — 2곳/.test(out), '세로 목록 줄도 없음');
-  assert.match(out, /node scan\.mjs --all/);                   // 전체 진입점은 다음 한 수에
+  assert.match(out, /node scan\.js --all/);                   // 전체 진입점은 다음 한 수에
 });
 
 test('--all(겹침 있음): 세로 겹침 목록을 보여준다(전체 진단 보존)', () => {

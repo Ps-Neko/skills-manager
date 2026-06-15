@@ -1,4 +1,4 @@
-// test/cli-json.test.mjs — scan.mjs --json 의 공개 스키마(추천기·워크플로우의 기반)와
+// test/cli-json.test.js — scan.js --json 의 공개 스키마(추천기·워크플로우의 기반)와
 // enabledPlugins 병합이 skills[].enabled 까지 전파되는지 end-to-end 로 잠근다.
 import { test } from 'node:test';
 import assert from 'node:assert';
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SCAN = path.join(ROOT, 'scan.mjs');
+const SCAN = path.join(ROOT, 'scan.js');
 const PKG_VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 
 function homeWithPlugin({ enabled }) {

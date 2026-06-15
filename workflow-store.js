@@ -1,4 +1,4 @@
-// workflow-store.mjs
+// workflow-store.js
 // Skills Manager 워크플로우 저장소 — 내가 저장한 워크플로우의 파일 I/O.
 // ⚠️ 쓰기는 오직 이 사용자 파일에만. settings·스킬 폴더·다른 스킬은 안 건드린다.
 import fs from 'node:fs';
@@ -109,7 +109,7 @@ export function setStepSkill(name, stepIndex, skillId, file = defaultUserFile())
   return { ok: true, capability: step.capability, skill: step.skill };
 }
 
-// capability → 한국어 표 라벨의 단일 출처. scan.mjs 의 GROUPS 도 이 표를 참조한다(라벨 중복 제거).
+// capability → 한국어 표 라벨의 단일 출처. scan.js 의 GROUPS 도 이 표를 참조한다(라벨 중복 제거).
 // 인벤토리(groups)가 비어도 — 신규/빈 설치 — 단계 라벨이 영어 cap 으로 추락하지 않게 정적 보장.
 export const CAP_LABEL = {
   tdd: '테스트 먼저 짜기 (TDD)',

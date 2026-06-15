@@ -1,10 +1,10 @@
-// test/claude-env.test.mjs — settings.json + settings.local.json 병합 리더(읽기 전용).
+// test/claude-env.test.js — settings.json + settings.local.json 병합 리더(읽기 전용).
 import { test } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { readEnabledPlugins } from '../claude-env.mjs';
+import { readEnabledPlugins } from '../claude-env.js';
 
 function tmpClaude(settings, local) {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-env-'));

@@ -5,23 +5,23 @@ description: Skills Manager — scans the skills installed in Claude Code/Cursor
 
 # Skills Manager — 스킬 중복 지도 + 워크플로우
 
-**[중요] 검사·추천·업데이트/잔여물 탐지는 읽기 전용.** 쓰기는 셋뿐 — (1) 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`), (2) **관리 모드에서 `--confirm` 확인 후** standalone 스킬 폴더를 **휴지통으로 이동**(영구삭제 아님 · `manage-scan.mjs --remove`), (3) 그에 딸린 워크플로우 핀 정리(`scan.mjs --set-skill`). 그 외 설정·다른 스킬은 안 건드린다. **플러그인 안 스킬은 개별 끄기/제거가 불가능**하다 — 통째로만 꺼지는 구조적 벽이라 네이티브 `/plugin uninstall` 안내만 한다.
+**[중요] 검사·추천·업데이트/잔여물 탐지는 읽기 전용.** 쓰기는 셋뿐 — (1) 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`), (2) **관리 모드에서 `--confirm` 확인 후** standalone 스킬 폴더를 **휴지통으로 이동**(영구삭제 아님 · `manage-scan.js --remove`), (3) 그에 딸린 워크플로우 핀 정리(`scan.js --set-skill`). 그 외 설정·다른 스킬은 안 건드린다. **플러그인 안 스킬은 개별 끄기/제거가 불가능**하다 — 통째로만 꺼지는 구조적 벽이라 네이티브 `/plugin uninstall` 안내만 한다.
 
-> 실행 경로: 이 스킬 폴더(base 디렉터리)에 `scan.mjs`가 동봉돼 있다. 아래 절차의 `scan.mjs`는 그 파일이다 — base 기준 절대경로로 실행하라: `node "{이 스킬 base 디렉터리}/scan.mjs"`.
+> 실행 경로: 이 스킬 폴더(base 디렉터리)에 `scan.js`가 동봉돼 있다. 아래 절차의 `scan.js`는 그 파일이다 — base 기준 절대경로로 실행하라: `node "{이 스킬 base 디렉터리}/scan.js"`.
 
 ## 절차
 
 ### 1단계 — 스캔 (기계가 함)
-`node scan.mjs` 를 실행한다. 이 스크립트는 `~/.claude` 의 스킬·에이전트·플러그인을 읽기 전용으로 훑어:
+`node scan.js` 를 실행한다. 이 스크립트는 `~/.claude` 의 스킬·에이전트·플러그인을 읽기 전용으로 훑어:
 - gstack가 9개 surface 폴더(.cursor 등)에 둔 **미러 사본을 접고**,
 - 최상위 스킬을 "gstack가 깐 것 / 진짜 독립" 으로 나누고,
 - 플러그인 4개를 `enabledPlugins`(settings.json + settings.local.json 병합)로 켜짐/꺼짐 판정하고,
 - **시드 키워드 표(1단)** 로 같은 일 후보를 넓게 묶는다(거짓양성 허용 = 일부러 넓게).
 
-기본 출력(`node scan.mjs`)은 **접힌 요약**이다 — 결론 한 줄 + 다음 한 수만 나온다. **겹침 세로 목록은 기계가 안 찍는다** — 그건 3단계에서 네가 '겹침 막대 그래프'로 적는다(3단계 기본 형식; 그래야 기계와 네 글이 같은 숫자를 두 번 안 말한다). 처음 실행 시(저장된 흐름이 없을 때) 환영 안내 한 단락이 앞에 붙고, 이후엔 사라진다. 겹침 세로 목록·묶음별 분포·기본 묶음 근거·끄기 설명 전체는 `node scan.mjs --all` 로 본다.
+기본 출력(`node scan.js`)은 **접힌 요약**이다 — 결론 한 줄 + 다음 한 수만 나온다. **겹침 세로 목록은 기계가 안 찍는다** — 그건 3단계에서 네가 '겹침 막대 그래프'로 적는다(3단계 기본 형식; 그래야 기계와 네 글이 같은 숫자를 두 번 안 말한다). 처음 실행 시(저장된 흐름이 없을 때) 환영 안내 한 단락이 앞에 붙고, 이후엔 사라진다. 겹침 세로 목록·묶음별 분포·기본 묶음 근거·끄기 설명 전체는 `node scan.js --all` 로 본다.
 
 ### 2단계 — 판정 (이 명령이 도는 LLM = 너가 함)
-`node scan.mjs --judge` 를 실행해 **판정 패킷**(후보 무리 + 각 스킬 한 줄 설명)을 받는다.
+`node scan.js --judge` 를 실행해 **판정 패킷**(후보 무리 + 각 스킬 한 줄 설명)을 받는다.
 패킷의 설명을 읽고, 아래 **판정 루브릭**으로 각 후보를 가린다. 키워드는 이걸 못 한다 — 그래서 네가 한다.
 
 #### 판정 루브릭
@@ -36,7 +36,7 @@ description: Skills Manager — scans the skills installed in Claude Code/Cursor
 7. **플러그인은 통째로만 꺼진다(실측)** → 같은 플러그인 안 스킬 하나만 끄기는 Claude Code 미지원. "이 플러그인엔 겹치는 것 + 고유한 것이 같이 있어, 끄면 고유한 것도 잃어요" 트레이드오프를 반드시 평한국어로 보여준다.
 
 ### 3단계 — verdict 출력 (평한국어, 비개발자용)
-기계(`scan.mjs`)는 접힘에서 **결론 한 줄 + 다음 한 수만** 찍는다. 겹침 내역은 그 결론 바로 아래에 **네가 '겹침 띠' 한 줄로** 적는다 — 기계가 세로 목록을 안 찍으므로 같은 숫자를 두 번 말할 일이 없다(사용자가 호소한 '한 덩어리 중복'의 해소점). 데이브(AI로 빌드하는 비개발자)가 바로 읽게.
+기계(`scan.js`)는 접힘에서 **결론 한 줄 + 다음 한 수만** 찍는다. 겹침 내역은 그 결론 바로 아래에 **네가 '겹침 띠' 한 줄로** 적는다 — 기계가 세로 목록을 안 찍으므로 같은 숫자를 두 번 말할 일이 없다(사용자가 호소한 '한 덩어리 중복'의 해소점). 데이브(AI로 빌드하는 비개발자)가 바로 읽게.
 
 > **[추가 2026-06-15] 기본 출력 = 막대 그래프** (사용자가 가독성 때문에 직접 고른 기본값). 아래 **반드시 지킬 규칙**의 "겹침 띠 한 줄" 설명은 이제 막대를 못 쓸 때의 폴백으로만 본다.
 
@@ -106,7 +106,7 @@ Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 즉 "이 작업 = 5단계, 3단계엔 네가 깐 TDD 3개가 겹치니 그중 하나만" — **네 인벤토리 전체를 가로질러 중복까지 해소한 순서**. 단일 생태계는 자기 위에서 이걸 못 한다.
 
 ### 절차
-1. `node scan.mjs --json` 실행 → 인벤토리(skills+capabilities, groups+duplicateLevel) 확보.
+1. `node scan.js --json` 실행 → 인벤토리(skills+capabilities, groups+duplicateLevel) 확보.
 2. **작업 → capability 순서로 매핑** (네가 판단). 흔한 흐름 anchor (capability = scan의 cap):
    - 기능 개발: `brainstorm → spec → plan → (구현) → tdd → review`
    - 버그 수정: `debug → tdd(회귀) → review`
@@ -132,9 +132,9 @@ Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 추천 모드의 **이름 붙은 재사용 버전**이다. 자유 작업문 대신 미리 정의된 흐름(app-dev·bugfix·release-check·code-review·refactor)을 골라, 그 단계 시퀀스를 네 인벤토리로 해소한다.
 
 ### 절차
-1. `node scan.mjs --workflows` → 워크플로우 목록 + **각 단계의 쓸 스킬**(인벤토리로 해소한 단계별 표; `--workflows --json`이면 각 step에 `resolved` 부착). `list`면 여기서 끝 — 단, 아래 '표 제시' 규칙대로 찍는다.
+1. `node scan.js --workflows` → 워크플로우 목록 + **각 단계의 쓸 스킬**(인벤토리로 해소한 단계별 표; `--workflows --json`이면 각 step에 `resolved` 부착). `list`면 여기서 끝 — 단, 아래 '표 제시' 규칙대로 찍는다.
 2. 고른 `<name>` 템플릿을 읽는다 (이 스킬 폴더의 `workflows.json`). 없는 이름이면 목록 보여주고 되묻기.
-3. 템플릿의 각 step(capability)을 **추천 모드 절차와 똑같이** 해소: `scan.mjs --json` 인벤토리에서 그 capability 가진 스킬 찾기 → 1개면 그것 / 여러 개(중복)면 하나만+나머지 불필요 / 0개면 "기본 Claude로".
+3. 템플릿의 각 step(capability)을 **추천 모드 절차와 똑같이** 해소: `scan.js --json` 인벤토리에서 그 capability 가진 스킬 찾기 → 1개면 그것 / 여러 개(중복)면 하나만+나머지 불필요 / 0개면 "기본 Claude로".
 4. 평한국어로 이름 붙은 흐름 출력.
 
 ### 표 제시 (list/run 공통)
@@ -150,28 +150,28 @@ Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 0. `recommend` 또는 `workflow <이름>` 결과를 보여준 뒤, **먼저 제안한다**: "이대로 자주 쓰면 '이걸로 저장'이라고 하세요." — 사용자가 명시적으로 요청하면 아래로 진행한다.
 1. 저장할 흐름을 확보: (a) 직전 `recommend`/`workflow <name>` 결과를 쓰거나, (b) 사용자와 단계를 정한다.
 2. 중복(여러 출처) 단계는 사용자에게 **하나를 고르게** 해 고정한다(`"출처:이름"`). 못 고르거나 없으면 `skill: null`.
-3. 완성한 워크플로우 JSON을 `node scan.mjs --save "<이름>"` 의 stdin 으로 넘긴다(형식: `{ "label": "...", "steps": [{ "capability": "...", "skill": "출처:이름"|null, "note": "" }] }`). Windows 셸 이스케이프 문제로 직접 명령행 붙여넣기는 쓰지 않는다 — 항상 대화 경로(호스트가 stdin 구성)로 진행한다.
+3. 완성한 워크플로우 JSON을 `node scan.js --save "<이름>"` 의 stdin 으로 넘긴다(형식: `{ "label": "...", "steps": [{ "capability": "...", "skill": "출처:이름"|null, "note": "" }] }`). Windows 셸 이스케이프 문제로 직접 명령행 붙여넣기는 쓰지 않는다 — 항상 대화 경로(호스트가 stdin 구성)로 진행한다.
 4. 결과 문구(저장/덮어씀/실패 사유)를 평한국어로 그대로 전한다.
 
 ### 수정 (스킬 교체) — `/skills-manager workflow set-skill <이름>`
 저장한 내 흐름에서 **한 단계의 스킬 핀만** 바꾼다(단계 추가/삭제·이름변경은 안 함).
-1. `node scan.mjs --get "<이름>"` 으로 현재 단계와 박힌 스킬을 읽는다.
-2. 바꿀 단계의 capability에 겹침 후보가 여럿이면(`scan.mjs --json` groups) 후보를 보여주고 사용자가 하나 고르게 한다(우열 단정 금지).
-3. `node scan.mjs --set-skill "<이름>" --step <번호(1부터)> --skill "<출처:스킬>"` 호출. 비우려면 `--skill none`.
-   - 직접 CLI 예: `node scan.mjs --set-skill 내흐름 --step 3 --skill agent-skills:test-driven-development`
+1. `node scan.js --get "<이름>"` 으로 현재 단계와 박힌 스킬을 읽는다.
+2. 바꿀 단계의 capability에 겹침 후보가 여럿이면(`scan.js --json` groups) 후보를 보여주고 사용자가 하나 고르게 한다(우열 단정 금지).
+3. `node scan.js --set-skill "<이름>" --step <번호(1부터)> --skill "<출처:스킬>"` 호출. 비우려면 `--skill none`.
+   - 직접 CLI 예: `node scan.js --set-skill 내흐름 --step 3 --skill agent-skills:test-driven-development`
 4. 결과 문구를 평한국어로 그대로 전한다. 안 깔린 스킬이면 "주의…" 경고가 함께 나오지만 그대로 박힌다(실행 때 '실종' 표시로 다시 잡힘).
 - **내장 템플릿은 직접 못 고친다** — 먼저 `--get <내장>` 으로 받아 `--save <내이름>` 으로 내 흐름에 복제한 뒤 고친다.
 - **제거는 이미 있다** → 아래 `### 삭제 (delete)` 참고. (수정·제거가 둘 다 된다.)
 
 ### 실행 (run) — `/skills-manager workflow <이름>` 또는 `workflow run <이름>`
-1. `node scan.mjs --get "<이름>"` 으로 워크플로우(고정스킬 `installed` 표시 포함)를 읽는다. `not-found` 면 `--workflows` 목록을 보여주고 되묻는다.
+1. `node scan.js --get "<이름>"` 으로 워크플로우(고정스킬 `installed` 표시 포함)를 읽는다. `not-found` 면 `--workflows` 목록을 보여주고 되묻는다.
 2. 단계별로 안내한다: 각 단계의 capability + 고정 스킬을 "이 단계엔 이거 쓰세요"로. `skill:null`/cap 없음은 "기본 Claude로".
-3. **이번엔 다른 거**: 사용자가 바꾸려 하면 그 capability의 중복 후보(`scan.mjs --json` groups)를 보여주고 **이번 실행만** 교체한다. 저장본은 사용자가 "이걸로 바꿔 저장"이라 해야 `save`로 갱신.
+3. **이번엔 다른 거**: 사용자가 바꾸려 하면 그 capability의 중복 후보(`scan.js --json` groups)를 보여주고 **이번 실행만** 교체한다. 저장본은 사용자가 "이걸로 바꿔 저장"이라 해야 `save`로 갱신.
 4. **고정 스킬 실종**(`installed:false`): "이 단계에 고정했던 X가 지금 안 보여요" + 그 capability의 현재 후보를 제시해 다시 고르게 한다. 절대 멈추지 말 것.
 5. Skills Manager는 **조언만** 한다 — 실제 작업은 호스트가. 스킬을 자동 실행하지 않는다.
 
 ### 삭제 (delete) — `/skills-manager workflow delete <이름>`
-`node scan.mjs --delete "<이름>"`. 내 워크플로우만 지워진다(내장 템플릿은 못 지움 — 그대로 안내). 지우기 전 한 번 확인.
+`node scan.js --delete "<이름>"`. 내 워크플로우만 지워진다(내장 템플릿은 못 지움 — 그대로 안내). 지우기 전 한 번 확인.
 
 ### 경계
 **워크플로우 모드**의 쓰기는 저장 파일(`~/.claude/skills-manager-workflows.json`) 한 곳뿐 — 흐름·추천·실행 안내만 하고 settings.json·다른 스킬은 안 건드린다. (standalone 스킬 폴더 제거는 별도 아래 '관리 모드'의 `--remove --confirm`에서만.) 실제 작업 실행도 없음(조언자).
@@ -179,32 +179,32 @@ Skills Manager recommend의 가치는 **호스트가 구조상 못 하는 것**:
 ## 관리 모드 (update / remove)
 
 트리거: `/skills-manager update`("스킬 업데이트 점검"), `/skills-manager remove <스킬이름>`("스킬 제거", "깨끗이 지워").
-업데이트·잔여물 **탐지는 읽기 전용**: `node "{base}/manage-scan.mjs" --update-status | --residue <이름>`. standalone 스킬 **제거는 `--remove`** — 확인 없이 부르면 **dry-run 미리보기**, `--confirm <토큰>`일 때만 휴지통으로 이동(영구삭제 아님). 워크플로우 핀 정리는 `scan.mjs --set-skill`.
+업데이트·잔여물 **탐지는 읽기 전용**: `node "{base}/manage-scan.js" --update-status | --residue <이름>`. standalone 스킬 **제거는 `--remove`** — 확인 없이 부르면 **dry-run 미리보기**, `--confirm <토큰>`일 때만 휴지통으로 이동(영구삭제 아님). 워크플로우 핀 정리는 `scan.js --set-skill`.
 
 ### 업데이트 점검·수행 (update)
-1. `node manage-scan.mjs --update-status` 실행 → standalone 분류(git/copy) + 플러그인 목록(켜짐/꺼짐).
+1. `node manage-scan.js --update-status` 실행 → standalone 분류(git/copy) + 플러그인 목록(켜짐/꺼짐).
 2. 평한국어로 보고(세 갈래):
    - **git풀 가능**(.git 있는 스킬): 원하면 `git -C <폴더> pull` 로 업데이트(확인 후 실행).
    - **복사본**(no-update-path): 업데이트 경로 없음 — 원본에서 다시 받아야 하며 자동 갱신 불가.
    - **플러그인**: Claude Code 기본 기능이 함 — `/plugin marketplace update`. Skills Manager가 대신 안 한다(안내만).
 3. 실제 수행은 git풀 가능한 스킬만, 사용자 확인 후 `git -C <폴더> pull`. (현재 해당: skills-manager 1개.)
-   - **경고**: skills-manager 자체를 git pull 하면 로컬 커스터마이즈(SKILL.md 막대그래프·이 관리 모드 등)가 덮어쓰일 수 있다. 풀 전에 반드시 알린다. (단, `manage-scan.mjs` 같은 새 파일은 untracked라 풀에도 살아남음.)
+   - **경고**: skills-manager 자체를 git pull 하면 로컬 커스터마이즈(SKILL.md 막대그래프·이 관리 모드 등)가 덮어쓰일 수 있다. 풀 전에 반드시 알린다. (단, `manage-scan.js` 같은 새 파일은 untracked라 풀에도 살아남음.)
 
 ### 제거 (remove) — 잔여물 0 목표
 1. **플러그인 스킬이면**(manage-scan 결과 location=plugin): 개별 제거는 불가하지만 **멈추지 말고 현실적 선택지를 안내**한다. `--residue`가 돌려준 `removalGuide`로 소속 플러그인·함께 사라질 형제 스킬 수·켜짐 여부를 알려주고, 세 가지를 평한국어로 제시한다 — ① **통째 제거**(`/plugin uninstall <plugin>@<market>`; 형제 N개도 같이 손실) ② **통째 끄기**(제거 아님, settings `false`/`/plugin disable`, 되돌리기 쉬움) ③ **그 스킬 폴더만 물리 삭제**(비공식 — 플러그인 업데이트 때 되돌아올 수 있음). 보통 다른 게 필요 없으면 ①, 일단 숨기려면 ②를 권하고, ③은 위험을 분명히 한 뒤 본인이 택할 때만.
 2. **standalone 스킬이면**:
-   a. `node manage-scan.mjs --remove <이름>` 실행(확인 없음 = **dry-run**) → 무엇이 휴지통으로 갈지 + 함께 정리할 잔여물(워크플로우 핀 등) + **확인 토큰**을 미리 보여준다.
+   a. `node manage-scan.js --remove <이름>` 실행(확인 없음 = **dry-run**) → 무엇이 휴지통으로 갈지 + 함께 정리할 잔여물(워크플로우 핀 등) + **확인 토큰**을 미리 보여준다.
    b. 무엇이 옮겨지고 무엇이 남는지 평한국어로 보여주고 **제거 전 확인**을 받는다.
    c. 확인되면 수행:
-      - **스킬 폴더 제거**: `node manage-scan.mjs --remove <이름> --confirm <토큰>` → 폴더를 `~/.claude/.skills-manager-trash/`로 이동(영구삭제 아님, 복구 가능). realpath로 skills 직속 하위만 허용·심링크 탈출 방어, 모든 제거를 감사 로그에 남긴다.
-      - **워크플로우 사용자 핀**: `node scan.mjs --set-skill <흐름> --step <n> --skill none`(또는 다른 스킬로 교체).
+      - **스킬 폴더 제거**: `node manage-scan.js --remove <이름> --confirm <토큰>` → 폴더를 `~/.claude/.skills-manager-trash/`로 이동(영구삭제 아님, 복구 가능). realpath로 skills 직속 하위만 허용·심링크 탈출 방어, 모든 제거를 감사 로그에 남긴다.
+      - **워크플로우 사용자 핀**: `node scan.js --set-skill <흐름> --step <n> --skill none`(또는 다른 스킬로 교체).
       - **ECC 원장·메모리 평문 언급**: ECC는 갱신 절차로 재생성 권장, 메모리는 '제거됨'으로 서술 보정(사용자 동의 시). 무턱대고 수동 편집 금지.
    d. 제거 후 남은 수동 정리 자리가 있으면 목록으로 안내(잔여물 0 확인). 잘못 지웠으면 휴지통 폴더에서 되돌릴 수 있다.
 3. **경계**: `--remove --confirm` 은 standalone 스킬 폴더를 **휴지통으로 이동**하는 단 하나의 제거 쓰기다(dry-run·탐지는 읽기 전용). settings.json·플러그인 제거는 네이티브(`/plugin`)로만. 어떤 제거도 `--confirm` 없이는 하지 않는다.
 
 ## 경계 (전체)
 - 검사·추천·업데이트/잔여물 탐지 = 읽기 전용. settings.json·다른 스킬을 **건드리지 않는다**.
-- 쓰기는 셋뿐: (1) 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`), (2) `--confirm` 확인 후 standalone 스킬 폴더를 **휴지통으로 이동**(`manage-scan.mjs --remove`, 영구삭제 아님), (3) 그 워크플로우 핀 정리(`scan.mjs --set-skill`).
+- 쓰기는 셋뿐: (1) 워크플로우 저장 파일(`~/.claude/skills-manager-workflows.json`), (2) `--confirm` 확인 후 standalone 스킬 폴더를 **휴지통으로 이동**(`manage-scan.js --remove`, 영구삭제 아님), (3) 그 워크플로우 핀 정리(`scan.js --set-skill`).
 - 제거 안전장치: realpath로 `~/.claude/skills` 직속 하위만 허용(심링크 탈출·경로 주입 방어), 기본 dry-run, `--confirm <토큰>`일 때만 실행, 모든 제거를 감사 로그(`.skills-manager-trash/removals.log.jsonl`)에 기록.
 - **플러그인 안 스킬 개별 끄기/제거는 없다** — 통째로만 꺼지는 구조적 벽. 통째 제거는 네이티브 `/plugin uninstall`.
 - 실제 git pull 은 확인 후에만.

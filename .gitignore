@@ -2,6 +2,9 @@
 PLAN.md
 GATE0.md
 
+# 내부 기획·설계 문서(plans/specs/ideas) — 공개 불필요 + 로컬 홈 경로 등 개인정보 노출원이라 커밋 금지
+docs/
+
 # Skills Manager 아카이브(정리 백업, slice2) — 자기오염/노출 방지
 .skills-manager-archive/
 .skill-janitor-archive/
@@ -11,9 +14,10 @@ node_modules/
 *.log
 .DS_Store
 
-# scan.mjs --json 임시 덤프 — 내 PC 스킬 목록·홈 경로가 들어있어 커밋 금지
+# scan.js --json 임시 덤프 — 내 PC 스킬 목록·홈 경로가 들어있어 커밋 금지
 _inv.json
 _*.json
 
 # 일회성 스크래치 스크립트(아이디어 굳히기 등) — 작업 산출물, 커밋 금지
 _tmp_*.mjs
+_tmp_*.js

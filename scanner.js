@@ -1,9 +1,9 @@
-// scanner.mjs — ~/.claude 의 스킬·플러그인·에이전트를 "읽기 전용"으로 훑어 인벤토리를 모은다.
+// scanner.js — ~/.claude 의 스킬·플러그인·에이전트를 "읽기 전용"으로 훑어 인벤토리를 모은다.
 // fs 만 쓰고 process·출력은 안 한다. 경로를 인자로 받아 테스트에서 제어 가능하게.
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { readEnabledPlugins } from './claude-env.mjs';
+import { readEnabledPlugins } from './claude-env.js';
 
 // gstack 가 9개 surface 폴더에 사본을 미러 → 접어서 안 센다
 const SURFACE = new Set(['.cursor', '.factory', '.kiro', '.hermes', '.gbrain', '.slate', '.opencode', '.openclaw', '.agents']);

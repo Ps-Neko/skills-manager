@@ -1,7 +1,7 @@
-// test/view-model.test.mjs — 출력 정책(어떤 섹션을 어떤 순서로)의 단위 테스트.
+// test/view-model.test.js — 출력 정책(어떤 섹션을 어떤 순서로)의 단위 테스트.
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { buildHumanReport, buildJudgePacket } from '../view-model.mjs';
+import { buildHumanReport, buildJudgePacket } from '../view-model.js';
 
 const conf = (n) => Array.from({ length: n }, (_, i) => ({ label: '겹침' + i, hits: [0, 0], sources: ['a', 'b'] }));
 const kindsOf = (args) => buildHumanReport(args).sections.map((s) => s.kind);

@@ -1,5 +1,5 @@
-// view-model.mjs — "무엇을 어떤 순서로 보여줄지"(출력 정책)를 정하는 순수 모듈. fs·process 안 씀.
-// 예전엔 scan.mjs 가 직접 결정하던 부분을 여기로 모은다. render.mjs 는 이 모델을 문자열로 바꾸기만 한다(무엇을 보여줄지 판단 안 함).
+// view-model.js — "무엇을 어떤 순서로 보여줄지"(출력 정책)를 정하는 순수 모듈. fs·process 안 씀.
+// 예전엔 scan.js 가 직접 결정하던 부분을 여기로 모은다. render.js 는 이 모델을 문자열로 바꾸기만 한다(무엇을 보여줄지 판단 안 함).
 
 // 사람용 검사 결과 모델 — 섹션 목록(어떤 블록을 어떤 순서로). 데이터만 담고 문자열은 render 가 만든다.
 export function buildHumanReport({ uniqCount, conflicts, by, mirrorFiles, covSorted, full, noSavedFlows }) {

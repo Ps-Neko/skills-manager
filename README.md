@@ -35,7 +35,7 @@ Claude Code랑 Cursor에 스킬을 계속 깔다 보니, 어느 순간부터 문
 > 휴지통(`~/.claude/.skills-manager-trash/`)과 제거 로그(`removals.log.jsonl`)는 자동으로 비워지지 않습니다 — 복구가 끝났으면 직접 비우세요.
 
 ## 설치
-**폴더째 복사하거나 clone** 하세요. 개별 파일만 복사하면 안 됩니다 — 모듈과 보조 스크립트가 서로를 불러옵니다(`scan.mjs` 단독으로는 동작하지 않음).
+**폴더째 복사하거나 clone** 하세요. 개별 파일만 복사하면 안 됩니다 — 모듈과 보조 스크립트가 서로를 불러옵니다(`scan.js` 단독으로는 동작하지 않음).
 ```
 git clone https://github.com/Ps-Neko/skills-manager.git ~/.claude/skills/skills-manager
 ```
@@ -43,28 +43,28 @@ git clone https://github.com/Ps-Neko/skills-manager.git ~/.claude/skills/skills-
 ```
 ~/.claude/skills/skills-manager/
    ├─ SKILL.md             # 호스트 LLM 절차서(검사·추천·워크플로우·관리)
-   ├─ scan.mjs             # 진입점 — 아래 모듈들을 불러 실행
-   ├─ scanner.mjs          # 인벤토리 수집(읽기 전용)
-   ├─ classifier.mjs       # capability 판정·겹침 그룹
-   ├─ view-model.mjs       # 출력 정책
-   ├─ render.mjs           # 문자열 렌더링
-   ├─ workflow-store.mjs   # 워크플로우 저장/조회
-   ├─ claude-env.mjs       # ~/.claude 설정 공유 리더
-   ├─ manage-scan.mjs      # 관리 보조(업데이트·잔여물 탐지·standalone 제거)
+   ├─ scan.js             # 진입점 — 아래 모듈들을 불러 실행
+   ├─ scanner.js          # 인벤토리 수집(읽기 전용)
+   ├─ classifier.js       # capability 판정·겹침 그룹
+   ├─ view-model.js       # 출력 정책
+   ├─ render.js           # 문자열 렌더링
+   ├─ workflow-store.js   # 워크플로우 저장/조회
+   ├─ claude-env.js       # ~/.claude 설정 공유 리더
+   ├─ manage-scan.js      # 관리 보조(업데이트·잔여물 탐지·standalone 제거)
    ├─ workflows.json       # 내장 워크플로우 템플릿
    └─ package.json         # Node 18+ · 의존성 0 · node --test
 ```
 
 ## 사용
 - **검사 (지도)**: `/skills-manager` — 겹친 스킬을 한눈에 (접힌 요약)
-- **전체 상세**: `node scan.mjs --all` — 묶음별 분포·기본 묶음 근거까지
+- **전체 상세**: `node scan.js --all` — 묶음별 분포·기본 묶음 근거까지
 - **추천**: `/skills-manager recommend "배포 전 점검"` — 작업을 단계 흐름으로 펴고, 단계마다 하나씩
 - **워크플로우**: `/skills-manager workflow list` · `workflow save <이름>` · `workflow <이름>`(실행 안내) — 내 흐름을 이름 붙여 저장·재사용
-- **직접 실행**: `node scan.mjs` (정밀 판정 패킷까지: `node scan.mjs --judge`)
+- **직접 실행**: `node scan.js` (정밀 판정 패킷까지: `node scan.js --judge`)
 
 ### 출력 예시 — 기본 (접힌 요약 + 막대 그래프)
 
-기계(`node scan.mjs`)는 결론 한 줄 + 다음 한 수만 찍습니다(세로 겹침 목록은 안 찍음):
+기계(`node scan.js`)는 결론 한 줄 + 다음 한 수만 찍습니다(세로 겹침 목록은 안 찍음):
 ```
 Skills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)
 
@@ -73,7 +73,7 @@ Skills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)
 다음 한 수:
   · 지금 하려는 작업을 단계로 펴 보기 — /skills-manager recommend "할 일 한 줄"
   · 가장 큰 겹침(아이디어/브레인스토밍 6곳)을 자주 쓰면 내 흐름으로 굳히기 — /skills-manager workflow save 내흐름
-  · 겹침 전체·묶음별 분포 — node scan.mjs --all
+  · 겹침 전체·묶음별 분포 — node scan.js --all
 ```
 
 `/skills-manager`로 부르면 이 결론 **바로 아래**에 겹침을 **막대 그래프**로 정리해 줍니다(가독성 때문에 고른 기본값) — 곳 수 많은 순, 묶음당 한 줄, `■`=진짜 같은 일·`·`=역할만 다른 일:
@@ -98,18 +98,18 @@ TDD         3곳 다 같음     │■■■
 괄호 안은 역할 다른 걸 빼고 실제로 같은 일만 추린 수.
 ```
 
-세로 전체 목록·묶음별 분포·기본 묶음 근거·끄기 설명은 `node scan.mjs --all`로 봅니다.
+세로 전체 목록·묶음별 분포·기본 묶음 근거·끄기 설명은 `node scan.js --all`로 봅니다.
 
 ## 요구사항
 - Node.js 18+ (의존성 0). 테스트: `node --test`.
 
-> ⚠️ `node scan.mjs --json` 출력은 로컬 경로(`skillsPath`)와 설치된 스킬 이름·설명을 포함합니다 — 공유 전 개인 정보를 확인하세요(출력에도 `_warning`으로 표시됩니다).
+> ⚠️ `node scan.js --json` 출력은 로컬 경로(`skillsPath`)와 설치된 스킬 이름·설명을 포함합니다 — 공유 전 개인 정보를 확인하세요(출력에도 `_warning`으로 표시됩니다).
 
 ## 상태
 - **검사 (지도)** — 있음: 스캔 → 겹친 지도 → 2단 판정 (읽기 전용)
 - **추천** — 있음: 작업을 단계 흐름으로 펴고, 단계마다 하나씩
 - **워크플로우 저장/실행** — 있음: 내 흐름을 이름 붙여 저장·재사용 (저장 파일에만 씀)
-- **업데이트/잔여물 탐지** — 있음: `manage-scan.mjs`로 업데이트 경로·제거 잔여물 점검 (읽기 전용)
+- **업데이트/잔여물 탐지** — 있음: `manage-scan.js`로 업데이트 경로·제거 잔여물 점검 (읽기 전용)
 - **standalone 스킬 제거** — 있음: `--confirm` 확인 후 휴지통으로 이동(복구 가능). 플러그인 안 스킬은 개별 제거 불가(네이티브 `/plugin`).
 
 **스킬이 많아졌다면, 이제는 더 깔기 전에 한 번 쓸어볼 때입니다.**

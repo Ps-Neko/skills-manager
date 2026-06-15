@@ -1,4 +1,4 @@
-// test/manage-scan.test.mjs — 관리 보조의 standalone 제거(유일한 쓰기) 안전 동작 검증.
+// test/manage-scan.test.js — 관리 보조의 standalone 제거(유일한 쓰기) 안전 동작 검증.
 // 실제 ~/.claude 를 건드리지 않도록 가짜 HOME/USERPROFILE 로 CLI 를 자식 프로세스로 돌린다.
 import { test } from 'node:test';
 import assert from 'node:assert';
@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
-const MS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'manage-scan.mjs');
+const MS = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'manage-scan.js');
 
 function homeWithSkill(name = 'victim') {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-ms-'));

@@ -1,10 +1,10 @@
-// test/scanner.test.mjs — frontmatter 파서(readFM)·인벤토리 수집의 단위 테스트.
+// test/scanner.test.js — frontmatter 파서(readFM)·인벤토리 수집의 단위 테스트.
 import { test } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { readFM, scanInventory } from '../scanner.mjs';
+import { readFM, scanInventory } from '../scanner.js';
 
 function tmpFile(content) {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-fm-'));

@@ -1,5 +1,5 @@
-// claude-env.mjs — ~/.claude 설정을 읽는 공유 헬퍼 (읽기 전용, fs 만 씀).
-// scanner.mjs(일반 스캔)와 manage-scan.mjs(관리 모드)가 같은 규칙으로 enabledPlugins 를
+// claude-env.js — ~/.claude 설정을 읽는 공유 헬퍼 (읽기 전용, fs 만 씀).
+// scanner.js(일반 스캔)와 manage-scan.js(관리 모드)가 같은 규칙으로 enabledPlugins 를
 // 읽도록 단일 출처로 둔다. 둘이 settings.json / settings.local.json 병합을 다르게 하면
 // '플러그인 켜짐' 판정이 서로 갈리는 버그가 나므로(예전 manage-scan 은 settings.json 만 읽었음).
 

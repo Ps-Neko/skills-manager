@@ -2,19 +2,19 @@
 // Skills Manager — 스킬 중복 지도 + 워크플로우
 // ~/.claude 의 스킬·에이전트·플러그인을 "읽기 전용"으로 훑어,
 // 같은 일을 하는 스킬이 여러 출처에 겹쳐 깔린 걸 평한국어 지도로 보여준다.
-// [경계] 검사·추천은 읽기 전용(안 끄고 안 바꿈). scan.mjs 의 쓰기는 워크플로우 저장 파일 한 곳뿐.
-//   (standalone 스킬 폴더 제거는 manage-scan.mjs --remove --confirm 가 휴지통 이동으로만 — scan.mjs 는 폴더를 안 지운다.)
+// [경계] 검사·추천은 읽기 전용(안 끄고 안 바꿈). scan.js 의 쓰기는 워크플로우 저장 파일 한 곳뿐.
+//   (standalone 스킬 폴더 제거는 manage-scan.js --remove --confirm 가 휴지통 이동으로만 — scan.js 는 폴더를 안 지운다.)
 //   1단(키워드)으로 후보를 넓게 묶고, 2단 정밀 판정은 `--judge` 패킷을 LLM이 읽어서.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps } from './workflow-store.mjs';
-import { scanInventory } from './scanner.mjs';
-import { capsOfItem, classify } from './classifier.mjs';
-import { buildHumanReport, buildJudgePacket } from './view-model.mjs';
-import { dispWidth, padW, renderReport, renderJudgePacket } from './render.mjs';
+import { saveWorkflow, removeWorkflow, loadUser, listAll, annotateMissing, setStepSkill, resolveSteps } from './workflow-store.js';
+import { scanInventory } from './scanner.js';
+import { capsOfItem, classify } from './classifier.js';
+import { buildHumanReport, buildJudgePacket } from './view-model.js';
+import { dispWidth, padW, renderReport, renderJudgePacket } from './render.js';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
@@ -97,7 +97,7 @@ if (!fs.existsSync(SKILLS) && !WORKFLOW_STORE_OPS.some((f) => process.argv.inclu
   process.exit(0);
 }
 
-// FS 인벤토리 수집은 scanner.mjs 가 담당 — scan.mjs 는 경로만 넘기고 결과를 받는다.
+// FS 인벤토리 수집은 scanner.js 가 담당 — scan.js 는 경로만 넘기고 결과를 받는다.
 const { uniq, plugins, agentCount, mirrorFiles } = scanInventory({ SKILLS, CLAUDE, PLUGINS, AGENTS });
 
 // --get <name>: 워크플로우 1건(내장+사용자)을 고정스킬 실종 표시와 함께 JSON 으로 — run 안내용.
@@ -148,7 +148,7 @@ if (process.argv.includes('--set-skill')) {
   process.exit(0);
 }
 
-// 분류(capability 판정 + 충돌/그룹)는 classifier.mjs(순수)가 담당 — scan.mjs 는 인벤토리만 넘긴다.
+// 분류(capability 판정 + 충돌/그룹)는 classifier.js(순수)가 담당 — scan.js 는 인벤토리만 넘긴다.
 const { conflicts, cov, covSorted, groups, groupsByCap } = classify(uniq);
 
 // --workflows: 워크플로우 목록 + 각 단계의 쓸 스킬(인벤토리로 해소). 인벤토리·groups 뒤라야 함.

@@ -1,9 +1,9 @@
-// classifier.mjs — capability 판정 + 충돌/그룹 생성 (순수). fs·process 안 씀.
-// scan.mjs 가 모은 인벤토리(uniq = {name, source, desc}[])만 받아 분류 결과를 돌려준다 — 결정적이라 단위 테스트 가능.
+// classifier.js — capability 판정 + 충돌/그룹 생성 (순수). fs·process 안 씀.
+// scan.js 가 모은 인벤토리(uniq = {name, source, desc}[])만 받아 분류 결과를 돌려준다 — 결정적이라 단위 테스트 가능.
 // [1단] 시드 키워드로 후보를 넓게 묶는다(거짓양성 허용). 정밀 분리는 --judge 2단에서 LLM이.
 //   주신호 = 스킬 이름(re). 보조신호 = 설명(descRe) — 이름이 키워드를 안 써도 잡되,
 //   설명 매칭은 'deploy/launch' 같은 흔한 단어 대신 **특정 구절·한국어 라벨**만 골라 오탐을 억제한다.
-import { CAP_LABEL } from './workflow-store.mjs';
+import { CAP_LABEL } from './workflow-store.js';
 
 // 시드 키워드 표 (1단 — 넓게). 라벨은 CAP_LABEL 단일 출처에서.
 // re = 이름 매칭(주신호). descRe = 설명까지 본 보조 매칭(특정 구절만 — 정밀도 우선).

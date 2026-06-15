@@ -1,4 +1,4 @@
-// test/cli-workflow.test.mjs
+// test/cli-workflow.test.js
 import { test } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
-const SCAN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'scan.mjs');
+const SCAN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'scan.js');
 
 // 워크플로우 스토어 CLI 테스트는 HOME 을 빈 임시폴더로 격리한다 — 개발자의 실제
 // ~/.claude/skills 에 의존하지 않게(그 의존이 "로컬 green·CI red" 함정의 원인이었다).

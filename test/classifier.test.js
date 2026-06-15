@@ -1,7 +1,7 @@
-// test/classifier.test.mjs — capability 판정·충돌/그룹 생성(순수)의 단위 테스트.
+// test/classifier.test.js — capability 판정·충돌/그룹 생성(순수)의 단위 테스트.
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { capsOf, capsOfItem, classify } from '../classifier.mjs';
+import { capsOf, capsOfItem, classify } from '../classifier.js';
 
 const S = (name, source) => ({ name, source, desc: '' });
 

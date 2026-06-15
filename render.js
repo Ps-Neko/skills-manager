@@ -1,5 +1,5 @@
-// render.mjs — Skills Manager 사람용 출력 렌더링(순수 함수). fs·process 안 씀.
-// scan.mjs 가 계산한 데이터(conflicts·cov·by…)를 받아 문자열만 돌려준다 — 결정적이라 단위 테스트 가능.
+// render.js — Skills Manager 사람용 출력 렌더링(순수 함수). fs·process 안 씀.
+// scan.js 가 계산한 데이터(conflicts·cov·by…)를 받아 문자열만 돌려준다 — 결정적이라 단위 테스트 가능.
 
 // 한글/CJK 는 터미널 폭 2 → 표 정렬용 표시폭.
 const isWide = (cp) => (cp >= 0x1100 && cp <= 0x115F) || (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0xFFE0 && cp <= 0xFFE6);
@@ -26,7 +26,7 @@ export function renderOverlaps(conflicts, { full = false, topN = 7 } = {}) {
     ? `같은 일이 겹친 곳 — ${conflicts.length}가지 (큰 ${topN}개만):`
     : `같은 일이 겹친 곳 — ${conflicts.length}가지:`;
   const lines = shown.map((c) => `  · ${padW(c.label, LW)}— ${c.hits.length}곳`);
-  if (!full && rest > 0) lines.push(`  · 나머지 ${rest}가지 — 전체 보기: node scan.mjs --all`);
+  if (!full && rest > 0) lines.push(`  · 나머지 ${rest}가지 — 전체 보기: node scan.js --all`);
   return [head, ...lines].join('\n');
 }
 
@@ -37,10 +37,10 @@ export function renderNextAction(conflicts) {
   if (conflicts.length) {
     const top = sortedConflicts(conflicts)[0];
     lines.push(`  · 가장 큰 겹침(${top.label} ${top.hits.length}곳)을 자주 쓰면 내 흐름으로 굳히기 — /skills-manager workflow save 내흐름`);
-    lines.push('  · 겹침 전체·묶음별 분포 — node scan.mjs --all');
+    lines.push('  · 겹침 전체·묶음별 분포 — node scan.js --all');
   } else {
     lines.push('  · 미리 짜인 흐름 구경 — /skills-manager workflow list');
-    lines.push('  · 묶음별 분포 전체 — node scan.mjs --all');
+    lines.push('  · 묶음별 분포 전체 — node scan.js --all');
   }
   return lines.join('\n');
 }
