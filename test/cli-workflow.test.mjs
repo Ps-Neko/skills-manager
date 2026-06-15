@@ -9,11 +9,16 @@ import { execFileSync } from 'node:child_process';
 
 const SCAN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'scan.mjs');
 
+// 워크플로우 스토어 CLI 테스트는 HOME 을 빈 임시폴더로 격리한다 — 개발자의 실제
+// ~/.claude/skills 에 의존하지 않게(그 의존이 "로컬 green·CI red" 함정의 원인이었다).
+// SKILLS_MANAGER_HOME(워크플로우 파일)은 테스트마다 따로 주입한다.
+const FAKE_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'sw-fakehome-'));
+
 function run(args, { input, home }) {
   return execFileSync(process.execPath, [SCAN, ...args], {
     input: input ?? '',
     encoding: 'utf8',
-    env: { ...process.env, SKILLS_MANAGER_HOME: home },
+    env: { ...process.env, HOME: FAKE_HOME, USERPROFILE: FAKE_HOME, SKILLS_MANAGER_HOME: home },
   });
 }
 

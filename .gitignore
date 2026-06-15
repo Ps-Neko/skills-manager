@@ -14,3 +14,6 @@ node_modules/
 # scan.mjs --json 임시 덤프 — 내 PC 스킬 목록·홈 경로가 들어있어 커밋 금지
 _inv.json
 _*.json
+
+# 일회성 스크래치 스크립트(아이디어 굳히기 등) — 작업 산출물, 커밋 금지
+_tmp_*.mjs
