@@ -84,19 +84,25 @@ function renderCoverage(conflictCount, covSorted) {
 const SRC_KO = { gstack: 'gstack', '.agents': '.agents(심링크)', user: '직접 설치', 'agent-skills': 'agent-skills', superpowers: 'superpowers', codex: 'codex', harness: 'harness', '외부': '외부 링크' };
 
 // 사람용 검사 결과 조립 — view-model 이 정한 sections 모델을 문자열로 변환만 한다(무엇을 보여줄지 판단은 view-model).
+// 시각 위계: 색·이모지·아이콘은 SKILL.md 절대 제약 → 가로 구분선(─)으로만 띠를 나눠 결론·섹션을 도드라지게.
+//   배너(있으면)=분석 위 안내라 빈 줄로만 분리, 그 아래 제목·결론·상세·다음 한 수는 구분선으로 띠 구분.
+//   결론은 제목 줄과 다음 띠 사이에 끼어 헤드라인처럼 읽힌다(접힘에선 결론↔다음 한 수만 남아 더 또렷).
 export function renderReport({ sections }) {
   const TITLE = 'Skills Manager — 검사 결과 (읽기 전용 · 아무것도 안 바꿈)';
-  const blocks = [];
+  const RULE = '─'.repeat(54);                 // 섹션을 가르는 얇은 가로줄(도구 본래 idiom)
+  const intro = [];                            // 배너: 본문과 빈 줄로 분리
+  const core = [];                             // 제목·결론·상세·다음 한 수: 구분선으로 띠 분리
   for (const s of sections) {
-    if (s.kind === 'banner') blocks.push(noSavedWorkflowBanner());
-    else if (s.kind === 'title') blocks.push(TITLE);
-    else if (s.kind === 'conclusion') blocks.push('  ' + renderConclusion(s.uniqCount, s.conflictCount));
-    else if (s.kind === 'overlaps') blocks.push(renderOverlaps(s.conflicts, { full: true }));
-    else if (s.kind === 'inventory') blocks.push(renderInventoryLine(s.uniqCount, s.by, s.mirrorFiles, { full: true }));
-    else if (s.kind === 'coverage') blocks.push(renderCoverage(s.conflictCount, s.covSorted));
-    else if (s.kind === 'nextAction') blocks.push(renderNextAction(s.conflicts));
+    if (s.kind === 'banner') intro.push(noSavedWorkflowBanner());
+    else if (s.kind === 'title') core.push(TITLE);
+    else if (s.kind === 'conclusion') core.push('  ' + renderConclusion(s.uniqCount, s.conflictCount));
+    else if (s.kind === 'overlaps') core.push(renderOverlaps(s.conflicts, { full: true }));
+    else if (s.kind === 'inventory') core.push(renderInventoryLine(s.uniqCount, s.by, s.mirrorFiles, { full: true }));
+    else if (s.kind === 'coverage') core.push(renderCoverage(s.conflictCount, s.covSorted));
+    else if (s.kind === 'nextAction') core.push(renderNextAction(s.conflicts));
   }
-  return blocks.join('\n\n');
+  const body = core.join('\n' + RULE + '\n');
+  return intro.length ? intro.join('\n\n') + '\n\n' + body : body;
 }
 
 // 2단 판정 패킷 — buildJudgePacket 이 준 모델을 문자열로.
