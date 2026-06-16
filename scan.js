@@ -16,6 +16,7 @@ import { capsOfItem, classify } from './classifier.js';
 import { buildHumanReport, buildJudgePacket } from './view-model.js';
 import { dispWidth, padW, renderReport, renderJudgePacket } from './render.js';
 import { stripCtl } from './sanitize.js';
+import { renderStartMenu, renderModeHelp } from './launcher.js';
 
 const argAfter = (flag) => process.argv[process.argv.indexOf(flag) + 1];
 
@@ -75,6 +76,19 @@ if (process.argv.includes('--delete')) {
     process.exit(1);
   }
   console.log(`삭제했어요: ${name}`);
+  process.exit(0);
+}
+
+// --menu: 시작 메뉴(런처) 화면. 정적 텍스트라 인벤토리 스캔/스킬 폴더 검사보다 앞에서 처리한다
+// (스킬 미설치 환경에서도 메뉴는 떠야 하고, 화면 출력에 인벤토리가 필요 없음).
+if (process.argv.includes('--menu')) {
+  console.log('\n' + renderStartMenu() + '\n');
+  process.exit(0);
+}
+
+// --help <모드>: 모드별 안내 화면. 모드 인자가 없거나 알 수 없으면 시작 메뉴로 폴백.
+if (process.argv.includes('--help')) {
+  console.log('\n' + renderModeHelp(argAfter('--help')) + '\n');
   process.exit(0);
 }
 
