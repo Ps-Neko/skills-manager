@@ -4,11 +4,15 @@ import assert from 'node:assert';
 import { dispWidth } from '../render.js';
 import { navFooter, renderStartMenu, renderModeHelp } from '../launcher.js';
 
-test('navFooter: back=true 면 뒤로, back=false 면 종료', () => {
-  assert.match(navFooter({ back: true }), /뒤로/);
-  assert.ok(!navFooter({ back: true }).includes('종료'), '뒤로 화면엔 종료 없음');
-  assert.match(navFooter({ back: false }), /종료/);
-  assert.match(navFooter({ back: false }), /도움말/);
+test('navFooter: back=true 면 뒤로, back=false 면 종료 + 좌우 순서 고정', () => {
+  const back = navFooter({ back: true });
+  const start = navFooter({ back: false });
+  assert.match(back, /뒤로/);
+  assert.ok(!back.includes('종료'), '뒤로 화면엔 종료 없음');
+  assert.match(start, /종료/);
+  assert.match(start, /도움말/);
+  assert.ok(back.indexOf('뒤로') < back.indexOf('도움말'), 'back: 0 뒤로가 도움말보다 먼저');
+  assert.ok(start.indexOf('도움말') < start.indexOf('종료'), 'start: ? 도움말이 종료보다 먼저');
 });
 
 test('renderStartMenu: 4개 모드·번호·도움말·종료를 담는다', () => {
@@ -17,7 +21,8 @@ test('renderStartMenu: 4개 모드·번호·도움말·종료를 담는다', () 
   for (const label of ['겹치는 스킬 찾기', '이 작업 뭐 쓰지?', '내 워크플로우', '스킬 정리']) {
     assert.ok(m.includes(label), `메뉴에 '${label}' 있어야 함`);
   }
-  assert.match(m, /1 /); assert.match(m, /4 /);
+  assert.match(m, /^ {3}1 {2}겹치는 스킬 찾기/m);
+  assert.match(m, /^ {3}4 {2}스킬 정리/m);
   assert.match(m, /도움말/);
   assert.match(m, /종료/);
   assert.ok(!m.includes('뒤로'), '시작 메뉴 하단은 종료(뒤로 아님)');

@@ -20,7 +20,7 @@ description: Skills Manager — scans the skills installed in Claude Code/Cursor
 | 3 | 내 워크플로우 | `scan.js --help workflow` 출력 후, 고른 하위 동작(목록/실행/저장/수정/삭제) 절차로 |
 | 4 | 스킬 정리 | `scan.js --help manage` 출력 후, 고른 하위 동작(업데이트/제거) 절차로 |
 
-- `0` = 뒤로(시작 메뉴 재출력) / 시작 메뉴에선 종료. `?` = `scan.js --help <현재 모드>` 출력.
+- `0` = 뒤로(시작 메뉴 재출력) / 시작 메뉴에선 종료. `?` = `scan.js --help <모드키>` 출력 — 모드키는 **검사=`scan` · 추천=`recommend` · 워크플로우=`workflow` · 정리=`manage`**(한국어 라벨을 그대로 인자로 넘기지 말 것 — 모르는 값이면 시작 메뉴로 폴백됨).
 - 하위 동작이 없는 검사·추천은 번호 선택 즉시 실행한다(한 단계 더 안 거침).
 - 메뉴·안내 화면은 `scan.js --menu` / `--help <모드>` 가 **고정 문구로** 찍는다 — 임의로 바꿔 그리지 말고 그 출력을 그대로 전한다.
 - 기존 직통 명령(`/skills-manager workflow X` 등)은 그대로 동작한다 — 메뉴는 모르는 사람을 위한 길.
