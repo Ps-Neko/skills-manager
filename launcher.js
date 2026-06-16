@@ -42,3 +42,52 @@ export function renderStartMenu() {
     RULE,
   ].join('\n');
 }
+
+// 모드별 안내 (--help <모드>). 하위 동작이 여럿인 모드만 번호 목록, 나머진 짧은 설명.
+// 알 수 없거나 빈 mode → 시작 메뉴로 폴백(안전 기본값).
+export function renderModeHelp(mode) {
+  if (mode === 'workflow') {
+    return [
+      section('3. 내 워크플로우'),
+      row('1', '목록 보기', '저장된 흐름 + 미리 짜인 흐름 전부'),
+      row('2', '흐름 실행', '고른 흐름을 단계별로 안내'),
+      row('3', '새로 저장', "지금 작업을 '내 흐름'으로 굳히기"),
+      row('4', '단계 스킬 바꾸기', '흐름의 한 단계에 쓸 스킬 교체'),
+      row('5', '삭제', '내가 만든 흐름 지우기'),
+      navFooter({ back: true }),
+      RULE,
+    ].join('\n');
+  }
+  if (mode === 'manage') {
+    return [
+      section('4. 스킬 정리'),
+      row('1', '업데이트 점검', 'git로 받은 스킬의 갱신 여부 확인'),
+      row('2', '스킬 제거', '안 쓰는 스킬을 휴지통으로 (미리보기 → 확인)'),
+      '',
+      '   * 제거는 항상 미리보기를 먼저 보여주고, 직접 확인하셔야만 휴지통으로',
+      '     옮깁니다. 영구삭제 아님 · 되돌리기 가능 · 엔진/설정은 안 건듦.',
+      navFooter({ back: true }),
+      RULE,
+    ].join('\n');
+  }
+  if (mode === 'scan') {
+    return [
+      section('1. 겹치는 스킬 찾기'),
+      ' 깔린 스킬을 훑어 같은 일 하는 스킬이 어디에 겹쳤는지 지도로 보여줍니다.',
+      ' 읽기 전용 — 아무것도 안 끄고 안 바꿉니다. 바로 실행됩니다.',
+      navFooter({ back: true }),
+      RULE,
+    ].join('\n');
+  }
+  if (mode === 'recommend') {
+    return [
+      section('2. 이 작업 뭐 쓰지?'),
+      ' 하려는 작업을 단계로 펴고, 단계마다 깔린 스킬 중 무엇을 쓸지 골라 줍니다.',
+      ' 겹치는 단계는 하나만 추리고 나머진 "이 흐름선 불필요"로 안내합니다.',
+      ' 작업을 한 줄로 알려주시면 바로 실행됩니다.',
+      navFooter({ back: true }),
+      RULE,
+    ].join('\n');
+  }
+  return renderStartMenu();
+}
