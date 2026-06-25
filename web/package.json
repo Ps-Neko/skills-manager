@@ -1,0 +1,14 @@
+{
+  "name": "skills-manager-web-console",
+  "private": true,
+  "version": "1.0.0",
+  "description": "기존 Skills Manager CLI를 웹에서 안전하게 조작하는 로컬 콘솔",
+  "type": "module",
+  "scripts": {
+    "setup": "npm --prefix app install",
+    "build": "npm --prefix app run build",
+    "start": "node server/index.js",
+    "dev:api": "node server/index.js",
+    "dev:web": "npm --prefix app run dev"
+  }
+}

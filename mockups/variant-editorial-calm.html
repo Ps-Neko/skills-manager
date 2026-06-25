@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skills Manager — 에디토리얼 미니멀 시안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* 종이/잉크 — 따뜻한 백지 위 한 가지 잉크, 한 가지 강조 */
+    --paper:        #f6f2e9;   /* 따뜻한 백지 */
+    --paper-deep:   #efe9db;   /* 한 칸 가라앉은 종이 */
+    --ink:          #1c1a17;   /* 본문 잉크(거의 검정, 따뜻함) */
+    --ink-soft:     #4a463e;   /* 보조 잉크 */
+    --ink-faint:    #8a8475;   /* 흐린 잉크 — 메타/캡션 */
+    --rule:         #d8d1bf;   /* 괘선 */
+    --rule-soft:    #e6e0d0;
+    --accent:       #9a3412;   /* 산화철 적갈색 — 데이터의 긴장 한 점 */
+    --accent-tint:  #c2410c;
+    --accent-wash:  rgba(154,52,18,.07);
+    --focus:        #1d4ed8;   /* 포커스 링 — 접근성용, 데이터엔 안 씀 */
+
+    --serif: "Newsreader", "Gowun Batang", Georgia, serif;
+    --batang: "Gowun Batang", "Newsreader", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+    --maxw: 1080px;
+    --gut: clamp(20px, 5vw, 72px);
+  }
+
+  *{ box-sizing:border-box; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--batang);
+    font-size:16.5px;
+    line-height:1.62;
+    letter-spacing:.005em;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  /* 미세한 종이 결 — 장식 아닌 질감 */
+  body::before{
+    content:"";
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(0,0,0,.018), transparent 60%),
+      radial-gradient(circle at 82% 88%, rgba(0,0,0,.015), transparent 55%);
+  }
+  .wrap{ position:relative; z-index:1; max-width:var(--maxw); margin:0 auto; padding:0 var(--gut); }
+
+  ::selection{ background:var(--accent); color:var(--paper); }
+  :focus-visible{ outline:2.5px solid var(--focus); outline-offset:3px; border-radius:1px; }
+
+  /* 숫자는 항상 고정폭·표 정렬 */
+  .num{ font-family:var(--mono); font-feature-settings:"tnum" 1; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+
+  /* ── 상단 마스트헤드 ──────────────────────── */
+  header.mast{
+    border-bottom:1.5px solid var(--ink);
+    padding-top:clamp(22px,4vw,40px);
+  }
+  .mast-row{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    gap:24px; padding-bottom:14px;
+  }
+  .mast-name{
+    font-family:var(--serif);
+    font-weight:600;
+    font-size:clamp(19px,2.4vw,23px);
+    letter-spacing:.01em;
+    line-height:1;
+    margin:0;
+  }
+  .mast-name .ko{ font-family:var(--batang); font-weight:400; color:var(--ink-soft); font-size:.74em; margin-left:.5em; letter-spacing:.02em; }
+  .mast-meta{
+    text-align:right;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.08em;
+    color:var(--ink-faint);
+    text-transform:uppercase;
+    line-height:1.5;
+  }
+  .readonly{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--accent); white-space:nowrap;
+  }
+  .readonly .dot{ width:5px; height:5px; border-radius:50%; background:var(--accent); display:inline-block; }
+
+  /* 섹션 탭(토글) — 신문 섹션 머리표처럼 */
+  nav.sections{
+    display:flex; gap:0; border-bottom:1px solid var(--rule);
+    margin-top:0;
+  }
+  nav.sections button{
+    appearance:none; background:none; border:none; cursor:pointer;
+    font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-faint);
+    padding:13px 0; margin-right:34px;
+    border-bottom:2px solid transparent; margin-bottom:-1px;
+    transition:color .18s;
+  }
+  nav.sections button:hover{ color:var(--ink-soft); }
+  nav.sections button[aria-current="true"]{ color:var(--ink); border-bottom-color:var(--accent); }
+  nav.sections button .idx{ color:var(--accent); margin-right:7px; }
+
+  /* ── 공통 섹션 골격 ──────────────────────── */
+  .panel{ display:none; padding:clamp(34px,6vw,72px) 0 96px; }
+  .panel.active{ display:block; }
+
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink-faint); margin:0 0 18px;
+  }
+
+  /* ── (A) 홈 — 에디토리얼 헤드라인 ──────────── */
+  .lede{
+    display:grid; grid-template-columns:1fr; gap:0;
+    border-bottom:1px solid var(--rule); padding-bottom:clamp(30px,5vw,52px);
+  }
+  .headline{
+    font-family:var(--serif);
+    font-weight:400;
+    font-size:clamp(34px,6.4vw,68px);
+    line-height:1.04;
+    letter-spacing:-.018em;
+    margin:0 0 .5em;
+    text-wrap:balance;
+    max-width:16ch;
+  }
+  .headline em{ font-style:italic; color:var(--accent); }
+  .headline .big{
+    font-weight:500;
+    font-variant-numeric:tabular-nums;
+    font-feature-settings:"tnum" 1;
+  }
+  .dek{
+    font-size:clamp(15px,1.9vw,18px);
+    color:var(--ink-soft);
+    max-width:46ch;
+    margin:0;
+    line-height:1.66;
+  }
+  /* 종이 위 한 줄 안심 카피 — 비개발자용, 과장 없이 */
+  .reassure{
+    margin-top:22px;
+    font-family:var(--mono); font-size:12.5px; line-height:1.85; color:var(--ink-faint);
+    letter-spacing:.005em;
+    max-width:54ch;
+  }
+  .reassure b{ color:var(--ink-soft); font-weight:500; }
+
+  /* 요약 수치 띠 — 표처럼 정렬, 박스 없음 */
+  .figures{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    border-bottom:1px solid var(--rule);
+  }
+  .figure{
+    padding:26px 0 24px; padding-right:24px;
+    border-right:1px solid var(--rule-soft);
+  }
+  .figure:last-child{ border-right:none; padding-right:0; }
+  .figure .v{
+    display:block;
+    font-family:var(--mono); font-weight:500;
+    font-size:clamp(30px,4.4vw,46px);
+    line-height:1; letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;
+  }
+  .figure .v .unit{ font-size:.42em; color:var(--ink-faint); margin-left:.3em; letter-spacing:0; }
+  .figure .v.accent{ color:var(--accent); }
+  .figure .k{
+    display:block; margin-top:11px;
+    font-family:var(--batang); font-size:14px; color:var(--ink-soft);
+  }
+  .figure .note{
+    display:block; margin-top:5px;
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; color:var(--ink-faint);
+  }
+
+  /* 모드 4개 — 목차/색인처럼, 번호 매긴 항목 */
+  .modes{ margin-top:6px; }
+  .modes-title{
+    font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink-faint); padding:30px 0 6px; margin:0;
+  }
+  .mode{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    align-items:baseline; gap:clamp(16px,3vw,40px);
+    padding:24px 0;
+    border-top:1px solid var(--rule);
+    cursor:pointer; text-decoration:none; color:inherit;
+    position:relative;
+    transition:background .2s, padding-left .2s;
+  }
+  .mode:last-child{ border-bottom:1px solid var(--rule); }
+  .mode .no{
+    font-family:var(--mono); font-size:13px; color:var(--ink-faint);
+    font-variant-numeric:tabular-nums; padding-top:.4em;
+    transition:color .2s;
+  }
+  .mode .body{ min-width:0; }
+  .mode h3{
+    font-family:var(--serif); font-weight:500;
+    font-size:clamp(21px,3vw,30px); line-height:1.12; letter-spacing:-.01em;
+    margin:0 0 .28em;
+  }
+  .mode p{
+    margin:0; font-size:14.5px; color:var(--ink-soft); line-height:1.55; max-width:50ch;
+  }
+  .mode .meta{
+    text-align:right; white-space:nowrap; padding-top:.35em;
+    font-family:var(--mono); font-size:12.5px; color:var(--ink-faint);
+    font-variant-numeric:tabular-nums;
+  }
+  .mode .meta b{ color:var(--accent); font-weight:600; font-size:15px; }
+  .mode .arrow{
+    display:inline-block; margin-left:.6em; color:var(--ink-faint);
+    transition:transform .2s, color .2s;
+  }
+  .mode:hover{ background:var(--accent-wash); padding-left:14px; }
+  .mode:hover .no{ color:var(--accent); }
+  .mode:hover h3{ text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:4px; text-decoration-color:var(--rule); }
+  .mode:hover .arrow{ transform:translateX(4px); color:var(--accent); }
+  .mode.is-primary h3 .lead-mark{
+    font-style:italic; color:var(--accent); font-family:var(--serif); margin-left:.35em; font-size:.62em; vertical-align:.18em;
+  }
+
+  /* ── (B) 겹침 지도 ───────────────────────── */
+  .map-head{
+    display:grid; grid-template-columns:1fr; gap:0;
+    border-bottom:1px solid var(--rule); padding-bottom:30px; margin-bottom:8px;
+  }
+  .map-head h2{
+    font-family:var(--serif); font-weight:400;
+    font-size:clamp(28px,4.6vw,46px); line-height:1.06; letter-spacing:-.015em;
+    margin:0 0 .35em; max-width:20ch;
+  }
+  .map-head h2 em{ font-style:italic; color:var(--accent); }
+  .map-head p{ margin:0; color:var(--ink-soft); font-size:15px; max-width:50ch; }
+
+  /* 범례 — 이중 인코딩 설명 */
+  .legend{
+    display:flex; flex-wrap:wrap; gap:24px 34px; align-items:center;
+    padding:22px 0; margin-bottom:14px;
+    border-bottom:1px solid var(--rule-soft);
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.02em; color:var(--ink-soft);
+  }
+  .legend .li{ display:inline-flex; align-items:center; gap:9px; }
+  .swatch-bar{ display:inline-flex; gap:3px; }
+  .swatch-bar i{ width:13px; height:13px; display:inline-block; }
+  .swatch-bar i.fill{ background:var(--accent); }
+  .swatch-bar i.solo{ background:none; border:1px solid var(--ink-faint); }
+  .legend .hint{ color:var(--ink-faint); }
+
+  /* 막대 행 — 신문 데이터 표. 라벨 12 / 숫자 우측 정렬 */
+  .bars{ width:100%; }
+  .bar-row{
+    display:grid;
+    grid-template-columns: minmax(150px, 15ch) 1fr auto;
+    align-items:center;
+    gap:clamp(14px,2.4vw,30px);
+    padding:17px 0;
+    border-top:1px solid var(--rule);
+    transition:background .18s;
+  }
+  .bar-row:last-child{ border-bottom:1px solid var(--rule); }
+  .bar-row:hover{ background:var(--accent-wash); }
+
+  .bar-label{ min-width:0; }
+  .bar-label .lab{
+    font-family:var(--batang); font-weight:700;
+    font-size:16px; line-height:1.25; color:var(--ink);
+    display:block;
+  }
+  .bar-label .src{
+    display:block; margin-top:4px;
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.02em; color:var(--ink-faint);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  /* 막대 자체 — 칸으로 곳 수를 셈. 칸 = 한 출처 */
+  .bar-track{ display:flex; align-items:center; gap:0; }
+  .cells{ display:flex; gap:5px; }
+  .cell{
+    width:clamp(26px,4.2vw,46px); height:22px;
+    background:var(--accent);
+    position:relative;
+  }
+  .cell.solo{
+    background:repeating-linear-gradient(45deg, transparent, transparent 3px, var(--ink-faint) 3px, var(--ink-faint) 4px);
+    border:1px solid var(--ink-faint);
+    opacity:.65;
+  }
+  .bar-track .verdict{
+    margin-left:16px;
+    font-family:var(--batang); font-size:13px; color:var(--ink-soft);
+    white-space:nowrap;
+  }
+
+  .bar-count{ text-align:right; white-space:nowrap; }
+  .bar-count .n{
+    font-family:var(--mono); font-weight:600; font-size:22px; color:var(--ink);
+    font-variant-numeric:tabular-nums; letter-spacing:-.02em;
+  }
+  .bar-count .n.solo{ color:var(--ink-faint); }
+  .bar-count .lbl{
+    font-family:var(--mono); font-size:10px; letter-spacing:.06em; color:var(--ink-faint);
+    text-transform:uppercase; margin-left:3px;
+  }
+  .bar-count .skills{
+    display:block; margin-top:3px;
+    font-family:var(--mono); font-size:10.5px; color:var(--ink-faint);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* 지도 하단 안심 한 줄 */
+  .map-foot{
+    margin-top:34px; padding-top:22px; border-top:1.5px solid var(--ink);
+    display:flex; flex-wrap:wrap; gap:14px 40px; align-items:baseline;
+    justify-content:space-between;
+  }
+  .map-foot .ff{
+    font-family:var(--batang); font-size:14px; color:var(--ink-soft); max-width:58ch;
+  }
+  .map-foot .ff b{ color:var(--accent); font-weight:700; }
+  .map-foot .sig{
+    font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);
+  }
+
+  /* 페이지 푸터 */
+  footer.foot{
+    border-top:1px solid var(--rule); padding:26px 0 50px;
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;
+    font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--ink-faint);
+    text-transform:uppercase;
+  }
+
+  /* ── 반응형 ───────────────────────── */
+  @media (max-width:720px){
+    .figures{ grid-template-columns:1fr; }
+    .figure{ border-right:none; border-bottom:1px solid var(--rule-soft); padding:20px 0; }
+    .figure:last-child{ border-bottom:none; }
+    .mode{ grid-template-columns:auto 1fr; }
+    .mode .meta{ grid-column:2; text-align:left; padding-top:10px; }
+    .bar-row{ grid-template-columns:1fr; gap:12px; padding:20px 0; }
+    .bar-count{ text-align:left; display:flex; align-items:baseline; gap:8px; }
+    .bar-count .skills{ margin-top:0; }
+    nav.sections button{ margin-right:22px; font-size:11px; }
+    .mast-row{ flex-wrap:wrap; }
+  }
+  @media (max-width:430px){
+    .cell{ width:24px; height:20px; }
+    .headline{ font-size:30px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- 마스트헤드 -->
+    <header class="mast">
+      <div class="mast-row">
+        <h1 class="mast-name">Skills&nbsp;Manager<span class="ko">스킬 정리 도구</span></h1>
+        <div class="mast-meta">
+          <span class="readonly"><span class="dot"></span>읽기 전용 · 손대지 않습니다</span><br>
+          <span class="num">SCAN 2026.06.16</span>
+        </div>
+      </div>
+      <nav class="sections" role="tablist" aria-label="화면 전환">
+        <button id="tab-home" role="tab" aria-current="true" aria-controls="panel-home"><span class="idx">A</span>훑어보기</button>
+        <button id="tab-map" role="tab" aria-current="false" aria-controls="panel-map"><span class="idx">B</span>겹침 지도</button>
+      </nav>
+    </header>
+
+    <!-- ════════ (A) 홈 ════════ -->
+    <main id="panel-home" class="panel active" role="tabpanel" aria-labelledby="tab-home">
+      <section class="lede">
+        <h2 class="headline">스킬 <span class="big">124</span>개 중,<br>같은 일을 하는 묶음이 <em><span class="big">아홉</span> 가지</em>.</h2>
+        <p class="dek">어디에서 일이 겹치는지 먼저 보여드립니다. 무엇을 지우라고 다그치지 않습니다 — 보고 나서, 정리는 직접 정하시면 됩니다.</p>
+        <p class="reassure">
+          설치된 스킬 <b>124개</b>는 사실 거의 100개에 가깝습니다 — 같은 스킬이 여러 곳에 비친 <b>486개</b>를 하나로 접어 센 수입니다.<br>
+          플러그인은 통째로만 켜고 끌 수 있어, 한 칸을 끄면 그 안의 다른 스킬도 함께 쉽니다. 그 점도 같이 짚어 드립니다.
+        </p>
+      </section>
+
+      <!-- 요약 수치 -->
+      <section class="figures" aria-label="요약">
+        <div class="figure">
+          <span class="v num">124<span class="unit">개</span></span>
+          <span class="k">설치된 스킬</span>
+          <span class="note">7곳에서 모음 · 거울 486개 접음</span>
+        </div>
+        <div class="figure">
+          <span class="v num accent">9<span class="unit">가지</span></span>
+          <span class="k">같은 일을 하는 묶음</span>
+          <span class="note">아래 겹침 지도에서 자세히</span>
+        </div>
+        <div class="figure">
+          <span class="v num">7<span class="unit">곳</span></span>
+          <span class="k">스킬이 들어온 출처</span>
+          <span class="note">gstack 53 · .agents 27 · agent-skills 23 …</span>
+        </div>
+      </section>
+
+      <!-- 모드 4개 (목차 형식) -->
+      <section class="modes" aria-label="할 수 있는 일">
+        <p class="modes-title">무엇을 해볼까요</p>
+
+        <a class="mode is-primary" href="#" data-goto="map">
+          <span class="no num">01</span>
+          <span class="body">
+            <h3>겹치는 스킬 찾기<span class="lead-mark">먼저 보기</span></h3>
+            <p>같은 일을 하는 스킬이 어느 곳에 흩어져 있는지 한 장의 지도로.</p>
+          </span>
+          <span class="meta"><b>9</b> 묶음<span class="arrow">→</span></span>
+        </a>
+
+        <a class="mode" href="#" data-goto="map">
+          <span class="no num">02</span>
+          <span class="body">
+            <h3>이 작업 뭐 쓰지</h3>
+            <p>“디버깅 할래” “리뷰 받을래” — 작업을 고르면 가장 맞는 스킬 하나를 짚어 줍니다.</p>
+          </span>
+          <span class="meta">작업별 추천<span class="arrow">→</span></span>
+        </a>
+
+        <a class="mode" href="#">
+          <span class="no num">03</span>
+          <span class="body">
+            <h3>내 워크플로우</h3>
+            <p>자주 쓰는 스킬 순서를 한 묶음으로 저장해 두고, 다음엔 한 번에 불러 실행합니다.</p>
+          </span>
+          <span class="meta">저장 · 실행<span class="arrow">→</span></span>
+        </a>
+
+        <a class="mode" href="#">
+          <span class="no num">04</span>
+          <span class="body">
+            <h3>스킬 정리</h3>
+            <p>안 쓰는 스킬을 한 칸으로 모아 쉬게 합니다. 지우는 게 아니라 옮겨 두는 것 — 언제든 되돌릴 수 있습니다.</p>
+          </span>
+          <span class="meta">치우기<span class="arrow">→</span></span>
+        </a>
+      </section>
+    </main>
+
+    <!-- ════════ (B) 겹침 지도 ════════ -->
+    <main id="panel-map" class="panel" role="tabpanel" aria-labelledby="tab-map">
+      <section class="map-head">
+        <p class="eyebrow">겹침 지도 · 곳 수 많은 순</p>
+        <h2>같은 일이 <em>여러 곳</em>에서<br>되풀이되고 있습니다.</h2>
+        <p>막대 한 칸은 그 일을 하는 한 출처입니다. 칸이 많을수록 같은 일이 더 여러 곳에 흩어져 있다는 뜻입니다.</p>
+      </section>
+
+      <div class="legend" aria-label="막대 읽는 법">
+        <span class="li"><span class="swatch-bar"><i class="fill"></i><i class="fill"></i></span> 채워진 칸 = 같은 일을 하는 곳</span>
+        <span class="li"><span class="swatch-bar"><i class="solo"></i></span> 빗금 칸 = 그곳에만 있는 일(안 겹침)</span>
+        <span class="li hint">아래 작은 글씨는 그 일이 들어온 출처 이름입니다.</span>
+      </div>
+
+      <div class="bars" id="bars" aria-label="겹침 묶음 막대그래프"><!-- JS로 채움 --></div>
+
+      <div class="map-foot">
+        <p class="ff">가장 많이 겹치는 건 <b>디버깅·아이디어</b>로, 각각 네 곳에서 같은 일을 합니다. 어느 하나만 남길지는 지도만 보고 천천히 정하셔도 됩니다.</p>
+        <span class="sig">읽기 전용 보고서 — 아무것도 바뀌지 않음</span>
+      </div>
+    </main>
+
+    <footer class="foot">
+      <span>Skills Manager · 에디토리얼 미니멀 시안</span>
+      <span class="num">124 SKILLS / 9 OVERLAPS / 7 SOURCES</span>
+    </footer>
+  </div>
+
+<script>
+  // 실제 scan.json 에서 가져온 9 묶음. 곳 수(sources.length) 내림차순.
+  // 곳 수가 같으면 스킬 수 많은 순.
+  const GROUPS = [
+    { label:"디버깅",              loc:4, skills:4, level:"high", sources:[".agents","gstack","agent-skills","superpowers"] },
+    { label:"아이디어 / 브레인스토밍", loc:4, skills:6, level:"high", sources:[".agents","gstack","agent-skills","superpowers"] },
+    { label:"테스트 먼저 짜기 (TDD)",  loc:3, skills:3, level:"high", sources:[".agents","agent-skills","superpowers"] },
+    { label:"코드 리뷰",            loc:3, skills:4, level:"high", sources:["gstack","agent-skills","superpowers"] },
+    { label:"계획 세우기",          loc:2, skills:5, level:"high", sources:["agent-skills","superpowers"] },
+    { label:"스펙 작성",            loc:2, skills:2, level:"high", sources:["gstack","agent-skills"] },
+    { label:"배포 / 출시",          loc:2, skills:3, level:"high", sources:["gstack","agent-skills"] },
+    { label:"보안 점검",            loc:2, skills:2, level:"high", sources:["gstack","agent-skills"] },
+    { label:"코드 단순화",          loc:1, skills:1, level:"none", sources:["agent-skills"] },
+  ];
+
+  const verdictText = (g) => {
+    if (g.loc === 1) return "한 곳에만 있어요";
+    return "같은 일, " + ["","한","두","세","네","다섯","여섯"][g.loc] + " 곳에서";
+  };
+
+  function renderBars(){
+    const root = document.getElementById("bars");
+    root.innerHTML = "";
+    for (const g of GROUPS){
+      const row = document.createElement("div");
+      row.className = "bar-row";
+
+      // 라벨 + 출처
+      const label = document.createElement("div");
+      label.className = "bar-label";
+      const lab = document.createElement("span");
+      lab.className = "lab"; lab.textContent = g.label;
+      const src = document.createElement("span");
+      src.className = "src"; src.textContent = g.sources.join(" · ");
+      label.append(lab, src);
+
+      // 막대(칸) + 판정
+      const track = document.createElement("div");
+      track.className = "bar-track";
+      const cells = document.createElement("div");
+      cells.className = "cells";
+      const solo = g.loc === 1;
+      for (let i = 0; i < g.loc; i++){
+        const c = document.createElement("span");
+        c.className = "cell" + (solo ? " solo" : "");
+        cells.appendChild(c);
+      }
+      const verdict = document.createElement("span");
+      verdict.className = "verdict";
+      verdict.textContent = verdictText(g);
+      track.append(cells, verdict);
+
+      // 우측 숫자
+      const count = document.createElement("div");
+      count.className = "bar-count";
+      const n = document.createElement("span");
+      n.className = "n num" + (solo ? " solo" : "");
+      n.textContent = g.loc;
+      const lbl = document.createElement("span");
+      lbl.className = "lbl"; lbl.textContent = "곳";
+      const sk = document.createElement("span");
+      sk.className = "skills num";
+      sk.textContent = "스킬 " + g.skills + "개";
+      count.append(n, lbl, sk);
+
+      row.append(label, track, count);
+      root.appendChild(row);
+    }
+  }
+  renderBars();
+
+  // 섹션 토글 (A/B) — 탭 + 모드 카드의 data-goto
+  const panels = { home: document.getElementById("panel-home"), map: document.getElementById("panel-map") };
+  const tabs   = { home: document.getElementById("tab-home"),   map: document.getElementById("tab-map") };
+
+  function show(which){
+    for (const k of Object.keys(panels)){
+      const on = (k === which);
+      panels[k].classList.toggle("active", on);
+      tabs[k].setAttribute("aria-current", on ? "true" : "false");
+    }
+    try { localStorage.setItem("sm-section", which); } catch(e){}
+    window.scrollTo({ top:0, behavior:"instant" in window ? "instant" : "auto" });
+  }
+
+  tabs.home.addEventListener("click", () => show("home"));
+  tabs.map.addEventListener("click",  () => show("map"));
+  document.querySelectorAll("[data-goto]").forEach(a => {
+    a.addEventListener("click", (e) => { e.preventDefault(); show(a.getAttribute("data-goto")); });
+  });
+
+  // 새로고침해도 보던 화면 유지
+  try {
+    const saved = localStorage.getItem("sm-section");
+    if (saved && panels[saved]) show(saved);
+  } catch(e){}
+</script>
+</body>
+</html>

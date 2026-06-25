@@ -1,0 +1,57 @@
+{
+  "name": "skills-manager-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Skills Manager 데스크톱 앱 (Electron) — 더블클릭 → 창에서 로컬 콘솔",
+  "author": "Ps-Neko",
+  "copyright": "Copyright © 2026 Ps-Neko",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:dir": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^31.7.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "dev.skillsmanager.console",
+    "productName": "Skills Manager",
+    "copyright": "Copyright © 2026 Ps-Neko",
+    "directories": { "buildResources": "build" },
+    "files": ["main.js", "preload.js", "loading.html"],
+    "extraResources": [
+      { "from": "../server", "to": "app/web/server" },
+      { "from": "../app/dist", "to": "app/web/app/dist" },
+      { "from": "../../baseline", "to": "app/baseline" },
+      { "from": "../../scan.js", "to": "app/scan.js" },
+      { "from": "../../manage-scan.js", "to": "app/manage-scan.js" },
+      { "from": "../../scanner.js", "to": "app/scanner.js" },
+      { "from": "../../classifier.js", "to": "app/classifier.js" },
+      { "from": "../../workflow-store.js", "to": "app/workflow-store.js" },
+      { "from": "../../view-model.js", "to": "app/view-model.js" },
+      { "from": "../../render.js", "to": "app/render.js" },
+      { "from": "../../sanitize.js", "to": "app/sanitize.js" },
+      { "from": "../../claude-env.js", "to": "app/claude-env.js" },
+      { "from": "../../launcher.js", "to": "app/launcher.js" },
+      { "from": "../../workflows.json", "to": "app/workflows.json" },
+      { "from": "../../package.json", "to": "app/package.json" }
+    ],
+    "win": { "target": ["nsis", "portable"], "icon": "build/icon.ico" },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "shortcutName": "Skills Manager",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": { "target": ["dmg"], "category": "public.app-category.developer-tools", "icon": "build/icon.png" },
+    "linux": { "target": ["AppImage"], "icon": "build/icon.png" }
+  }
+}

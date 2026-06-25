@@ -1,0 +1,29 @@
+{
+  "_comment": "테스트/데모용 스냅샷 (manage-scan.js --update-status 결과 모양). 실사용 시엔 라이브 데이터가 들어옵니다.",
+  "standalone": [
+    { "name": "autoplan",        "kind": "git",  "updatable": "git-pull",       "remote": "https://github.com/gstack/skills.git" },
+    { "name": "review",          "kind": "git",  "updatable": "git-pull",       "remote": "https://github.com/gstack/skills.git" },
+    { "name": "spec",            "kind": "git",  "updatable": "git-pull",       "remote": "https://github.com/gstack/skills.git" },
+    { "name": "ship",            "kind": "git",  "updatable": "git-pull",       "remote": "https://github.com/gstack/skills.git" },
+    { "name": "investigate",     "kind": "git",  "updatable": "git-pull",       "remote": "https://github.com/gstack/skills.git" },
+    { "name": "cso",             "kind": "git",  "updatable": "git-pull",       "remote": "https://github.com/gstack/skills.git" },
+    { "name": "tdd",             "kind": "git",  "updatable": "git-pull",       "remote": "https://github.com/agents/dotfiles.git" },
+    { "name": "diagnose",        "kind": "git",  "updatable": "git-pull",       "remote": "https://github.com/agents/dotfiles.git" },
+    { "name": "grill-me",        "kind": "git",  "updatable": "git-pull",       "remote": "https://github.com/agents/dotfiles.git" },
+    { "name": "my-notes",        "kind": "copy", "updatable": "no-update-path", "remote": "" },
+    { "name": "blog-helper",     "kind": "copy", "updatable": "no-update-path", "remote": "" },
+    { "name": "daily-standup",   "kind": "copy", "updatable": "no-update-path", "remote": "" }
+  ],
+  "plugins": [
+    { "name": "agent-skills", "enabled": true },
+    { "name": "superpowers",  "enabled": true },
+    { "name": "codex",        "enabled": true },
+    { "name": "harness",      "enabled": false }
+  ],
+  "summary": {
+    "standaloneTotal": 12,
+    "gitUpdatable": 9,
+    "noUpdatePath": 3,
+    "pluginNote": "플러그인은 Claude Code 기본 기능으로 업데이트: /plugin marketplace update"
+  }
+}

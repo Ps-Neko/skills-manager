@@ -1,0 +1,539 @@
+{
+  "workflows": [
+    {
+      "name": "app-dev",
+      "label": "새 기능 개발",
+      "steps": [
+        {
+          "capability": "brainstorm",
+          "note": "요구·아이디어 정리",
+          "resolved": {
+            "kind": "multi",
+            "label": "아이디어/브레인스토밍",
+            "skills": [
+              ".agents:grill-me",
+              ".agents:grill-with-docs",
+              "gstack:office-hours",
+              "agent-skills:idea-refine",
+              "agent-skills:interview-me",
+              "superpowers:brainstorming"
+            ],
+            "sources": [
+              ".agents",
+              "gstack",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 6
+          }
+        },
+        {
+          "capability": "spec",
+          "note": "스펙 작성",
+          "resolved": {
+            "kind": "multi",
+            "label": "스펙 작성",
+            "skills": [
+              "gstack:spec",
+              "agent-skills:spec-driven-development"
+            ],
+            "sources": [
+              "gstack",
+              "agent-skills"
+            ],
+            "count": 2
+          }
+        },
+        {
+          "capability": "plan",
+          "note": "구현 계획",
+          "resolved": {
+            "kind": "multi",
+            "label": "계획 세우기",
+            "skills": [
+              "agent-skills:planning-and-task-breakdown",
+              "superpowers:executing-plans",
+              "superpowers:subagent-driven-development",
+              "superpowers:using-git-worktrees",
+              "superpowers:writing-plans"
+            ],
+            "sources": [
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 5
+          }
+        },
+        {
+          "capability": "implement",
+          "note": "구현 (대개 기본 Claude)",
+          "resolved": {
+            "kind": "none",
+            "label": "구현",
+            "skills": [],
+            "sources": [],
+            "count": 0
+          }
+        },
+        {
+          "capability": "tdd",
+          "note": "테스트",
+          "resolved": {
+            "kind": "multi",
+            "label": "테스트 먼저 짜기 (TDD)",
+            "skills": [
+              ".agents:tdd",
+              "agent-skills:test-driven-development",
+              "superpowers:test-driven-development"
+            ],
+            "sources": [
+              ".agents",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 3
+          }
+        },
+        {
+          "capability": "review",
+          "note": "코드 리뷰",
+          "resolved": {
+            "kind": "multi",
+            "label": "코드 리뷰",
+            "skills": [
+              "gstack:review",
+              "agent-skills:code-review-and-quality",
+              "superpowers:receiving-code-review",
+              "superpowers:requesting-code-review"
+            ],
+            "sources": [
+              "gstack",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 4
+          }
+        }
+      ],
+      "source": "builtin"
+    },
+    {
+      "name": "bugfix",
+      "label": "버그 수정",
+      "steps": [
+        {
+          "capability": "debug",
+          "note": "원인 조사",
+          "resolved": {
+            "kind": "multi",
+            "label": "디버깅",
+            "skills": [
+              ".agents:diagnose",
+              "gstack:investigate",
+              "agent-skills:debugging-and-error-recovery",
+              "superpowers:systematic-debugging"
+            ],
+            "sources": [
+              ".agents",
+              "gstack",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 4
+          }
+        },
+        {
+          "capability": "tdd",
+          "note": "회귀 테스트",
+          "resolved": {
+            "kind": "multi",
+            "label": "테스트 먼저 짜기 (TDD)",
+            "skills": [
+              ".agents:tdd",
+              "agent-skills:test-driven-development",
+              "superpowers:test-driven-development"
+            ],
+            "sources": [
+              ".agents",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 3
+          }
+        },
+        {
+          "capability": "review",
+          "note": "리뷰",
+          "resolved": {
+            "kind": "multi",
+            "label": "코드 리뷰",
+            "skills": [
+              "gstack:review",
+              "agent-skills:code-review-and-quality",
+              "superpowers:receiving-code-review",
+              "superpowers:requesting-code-review"
+            ],
+            "sources": [
+              "gstack",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 4
+          }
+        }
+      ],
+      "source": "builtin"
+    },
+    {
+      "name": "release-check",
+      "label": "배포 전 점검",
+      "steps": [
+        {
+          "capability": "tdd",
+          "note": "테스트",
+          "resolved": {
+            "kind": "multi",
+            "label": "테스트 먼저 짜기 (TDD)",
+            "skills": [
+              ".agents:tdd",
+              "agent-skills:test-driven-development",
+              "superpowers:test-driven-development"
+            ],
+            "sources": [
+              ".agents",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 3
+          }
+        },
+        {
+          "capability": "security",
+          "note": "보안 점검",
+          "resolved": {
+            "kind": "multi",
+            "label": "보안 점검",
+            "skills": [
+              "gstack:cso",
+              "agent-skills:security-and-hardening"
+            ],
+            "sources": [
+              "gstack",
+              "agent-skills"
+            ],
+            "count": 2
+          }
+        },
+        {
+          "capability": "ship",
+          "note": "배포 점검",
+          "resolved": {
+            "kind": "multi",
+            "label": "배포/출시",
+            "skills": [
+              "gstack:land-and-deploy",
+              "gstack:ship",
+              "agent-skills:shipping-and-launch"
+            ],
+            "sources": [
+              "gstack",
+              "agent-skills"
+            ],
+            "count": 3
+          }
+        }
+      ],
+      "source": "builtin"
+    },
+    {
+      "name": "code-review",
+      "label": "코드 리뷰",
+      "steps": [
+        {
+          "capability": "review",
+          "note": "변경 리뷰",
+          "resolved": {
+            "kind": "multi",
+            "label": "코드 리뷰",
+            "skills": [
+              "gstack:review",
+              "agent-skills:code-review-and-quality",
+              "superpowers:receiving-code-review",
+              "superpowers:requesting-code-review"
+            ],
+            "sources": [
+              "gstack",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 4
+          }
+        }
+      ],
+      "source": "builtin"
+    },
+    {
+      "name": "refactor",
+      "label": "리팩터링",
+      "steps": [
+        {
+          "capability": "simplify",
+          "note": "단순화",
+          "resolved": {
+            "kind": "single",
+            "label": "코드 단순화",
+            "skills": [
+              "agent-skills:code-simplification"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "tdd",
+          "note": "테스트로 안전망",
+          "resolved": {
+            "kind": "multi",
+            "label": "테스트 먼저 짜기 (TDD)",
+            "skills": [
+              ".agents:tdd",
+              "agent-skills:test-driven-development",
+              "superpowers:test-driven-development"
+            ],
+            "sources": [
+              ".agents",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 3
+          }
+        },
+        {
+          "capability": "review",
+          "note": "리뷰",
+          "resolved": {
+            "kind": "multi",
+            "label": "코드 리뷰",
+            "skills": [
+              "gstack:review",
+              "agent-skills:code-review-and-quality",
+              "superpowers:receiving-code-review",
+              "superpowers:requesting-code-review"
+            ],
+            "sources": [
+              "gstack",
+              "agent-skills",
+              "superpowers"
+            ],
+            "count": 4
+          }
+        }
+      ],
+      "source": "builtin"
+    },
+    {
+      "name": "내기본개발",
+      "label": "새 기능 개발 (내 기본)",
+      "steps": [
+        {
+          "capability": "brainstorm",
+          "skill": "agent-skills:idea-refine",
+          "note": "",
+          "resolved": {
+            "kind": "pinned",
+            "label": "아이디어/브레인스토밍",
+            "skills": [
+              "agent-skills:idea-refine"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "spec",
+          "skill": "agent-skills:spec-driven-development",
+          "note": "",
+          "resolved": {
+            "kind": "pinned",
+            "label": "스펙 작성",
+            "skills": [
+              "agent-skills:spec-driven-development"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "plan",
+          "skill": "agent-skills:planning-and-task-breakdown",
+          "note": "",
+          "resolved": {
+            "kind": "pinned",
+            "label": "계획 세우기",
+            "skills": [
+              "agent-skills:planning-and-task-breakdown"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "implement",
+          "skill": null,
+          "note": "기본 Claude로 진행",
+          "resolved": {
+            "kind": "none",
+            "label": "구현",
+            "skills": [],
+            "sources": [],
+            "count": 0
+          }
+        },
+        {
+          "capability": "tdd",
+          "skill": "agent-skills:test-driven-development",
+          "note": "",
+          "resolved": {
+            "kind": "pinned",
+            "label": "테스트 먼저 짜기 (TDD)",
+            "skills": [
+              "agent-skills:test-driven-development"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "review",
+          "skill": "agent-skills:code-review-and-quality",
+          "note": "",
+          "resolved": {
+            "kind": "pinned",
+            "label": "코드 리뷰",
+            "skills": [
+              "agent-skills:code-review-and-quality"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        }
+      ],
+      "source": "user"
+    },
+    {
+      "name": "프론트리팩토링",
+      "label": "프론트엔드 리팩토링",
+      "steps": [
+        {
+          "capability": "리팩토링 계획",
+          "skill": ".agents:request-refactor-plan",
+          "note": "무엇을 어디까지 손볼지 작은 커밋 단위로 계획",
+          "resolved": {
+            "kind": "pinned",
+            "label": "리팩토링 계획",
+            "skills": [
+              ".agents:request-refactor-plan"
+            ],
+            "sources": [
+              ".agents"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "브라우저 동작 테스트",
+          "skill": "agent-skills:browser-testing-with-devtools",
+          "note": "손대기 전 현재 동작 고정 → 리팩토링 뒤 재확인",
+          "resolved": {
+            "kind": "pinned",
+            "label": "브라우저 동작 테스트",
+            "skills": [
+              "agent-skills:browser-testing-with-devtools"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "simplify",
+          "skill": "agent-skills:code-simplification",
+          "note": "실제 리팩토링(동작 그대로, 구조만 정리)",
+          "resolved": {
+            "kind": "pinned",
+            "label": "코드 단순화",
+            "skills": [
+              "agent-skills:code-simplification"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "시각 점검",
+          "skill": "gstack:design-review",
+          "note": "UI 깨짐·간격·위계가 그대로인지 디자이너 눈으로",
+          "resolved": {
+            "kind": "pinned",
+            "label": "시각 점검",
+            "skills": [
+              "gstack:design-review"
+            ],
+            "sources": [
+              "gstack"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "성능 점검",
+          "skill": "agent-skills:performance-optimization",
+          "note": "Core Web Vitals·로딩 속도 안 나빠졌는지",
+          "resolved": {
+            "kind": "pinned",
+            "label": "성능 점검",
+            "skills": [
+              "agent-skills:performance-optimization"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        },
+        {
+          "capability": "review",
+          "skill": "agent-skills:code-review-and-quality",
+          "note": "변경 전체 최종 점검",
+          "resolved": {
+            "kind": "pinned",
+            "label": "코드 리뷰",
+            "skills": [
+              "agent-skills:code-review-and-quality"
+            ],
+            "sources": [
+              "agent-skills"
+            ],
+            "count": 1
+          }
+        }
+      ],
+      "source": "user"
+    }
+  ]
+}

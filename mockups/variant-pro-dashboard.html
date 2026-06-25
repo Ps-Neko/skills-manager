@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Skills Manager — 신뢰감 있는 프로 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&family=Fragment+Mono&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     Skills Manager — Pro Dashboard direction
+     팔레트: 따뜻한 종이/계기판 중립 배경 + 단 하나의 날카로운 청록 강조
+     색은 장식이 아니라 정보 채널 (출처 = 색 토큰)
+     ============================================================ */
+  :root{
+    /* 계기판 종이 배경 — 인디고/보라 절대 금지 */
+    --paper:        oklch(0.985 0.004 95);   /* 본문 종이 */
+    --paper-sunk:   oklch(0.965 0.005 95);   /* 가라앉은 패널 */
+    --panel:        oklch(1 0 0);            /* 카드 면 */
+    --ink:          oklch(0.235 0.012 250);  /* 본문 글자 (차분한 잉크) */
+    --ink-soft:     oklch(0.46 0.012 250);   /* 보조 글자 */
+    --ink-faint:    oklch(0.62 0.010 250);   /* 흐린 글자 */
+    --hair:         oklch(0.905 0.006 250);  /* 실선 구분선 */
+    --hair-strong:  oklch(0.84 0.008 250);
+
+    /* 단 하나의 강조 — 깊은 청록(petrol/teal). 데이터에만 쓴다 */
+    --accent:       oklch(0.52 0.094 205);
+    --accent-deep:  oklch(0.40 0.082 210);
+    --accent-wash:  oklch(0.95 0.022 200);
+
+    /* 출처 = 색 토큰 (정보 채널). 무지개 금지, 절제된 한 계열에서 분기 */
+    --src-gstack:       oklch(0.55 0.10 250);   /* 청 */
+    --src-agents:       oklch(0.56 0.085 165);  /* 녹청 */
+    --src-agentskills:  oklch(0.60 0.105 60);   /* 황토 */
+    --src-superpowers:  oklch(0.56 0.10 25);    /* 적토 */
+    --src-codex:        oklch(0.50 0.045 300);  /* 회보라 (낮은 채도) */
+    --src-user:         oklch(0.50 0.012 250);  /* 중립 회 */
+    --src-harness:      oklch(0.62 0.04 140);   /* 흐린 녹 */
+
+    --radius:10px;
+    --mono:"Spline Sans Mono","Fragment Mono",ui-monospace,monospace;
+    --num:"Fragment Mono","Spline Sans Mono",ui-monospace,monospace;
+    --sans:"IBM Plex Sans KR",-apple-system,sans-serif;
+    --shadow:0 1px 0 oklch(0.9 0.006 250), 0 1px 3px oklch(0.5 0.02 250 / 0.06);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    background:
+      radial-gradient(circle at 1px 1px, oklch(0.91 0.006 250 / 0.55) 1px, transparent 0) 0 0/22px 22px,
+      var(--paper);
+    color:var(--ink);
+    font-weight:400;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .num{font-family:var(--num);font-feature-settings:"tnum" 1,"lnum" 1;font-variant-numeric:tabular-nums lining-nums;}
+
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;cursor:pointer;}
+
+  /* focus 접근성 — 또렷한 포커스 링 */
+  :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px;border-radius:4px;}
+
+  /* ---------- 상단 바 ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    background:oklch(0.985 0.004 95 / 0.86);
+    backdrop-filter:saturate(1.2) blur(8px);
+    border-bottom:1px solid var(--hair);
+  }
+  .topbar-inner{
+    max-width:1120px;margin:0 auto;padding:0 28px;
+    height:60px;display:flex;align-items:center;gap:18px;
+  }
+  .brand{display:flex;align-items:center;gap:11px;font-weight:600;letter-spacing:-0.01em;}
+  .brand .glyph{
+    width:26px;height:26px;border-radius:7px;
+    background:var(--ink);position:relative;flex:none;
+    display:grid;place-items:center;
+  }
+  /* 막대 글리프 — 제품 마크 자체가 막대그래프 */
+  .brand .glyph::before{
+    content:"";position:absolute;left:6px;bottom:6px;width:3px;height:7px;background:var(--paper);box-shadow:5px 0 0 var(--paper),10px 3px 0 var(--accent);}
+  .brand .glyph::after{content:"";position:absolute;left:6px;bottom:6px;width:3px;height:13px;background:transparent;}
+  .brand small{font-family:var(--mono);font-size:11px;color:var(--ink-faint);font-weight:500;letter-spacing:0.04em;text-transform:uppercase;}
+
+  .topnav{margin-left:auto;display:flex;gap:4px;background:var(--paper-sunk);border:1px solid var(--hair);border-radius:9px;padding:3px;}
+  .topnav button{
+    border:0;background:transparent;color:var(--ink-soft);
+    font-size:13px;font-weight:500;padding:7px 15px;border-radius:6px;transition:all .15s;
+  }
+  .topnav button[aria-current="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow);font-weight:600;}
+  .topnav button:hover:not([aria-current="true"]){color:var(--ink);}
+
+  .readonly-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:0.02em;
+    color:var(--accent-deep);background:var(--accent-wash);
+    border:1px solid oklch(0.82 0.04 200);border-radius:999px;padding:5px 11px;
+  }
+  .readonly-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none;}
+
+  /* ---------- 레이아웃 ---------- */
+  .wrap{max-width:1120px;margin:0 auto;padding:0 28px;}
+  section[data-view]{display:none;padding:40px 0 88px;}
+  section[data-view].active{display:block;}
+
+  .eyebrow{
+    font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:0.14em;
+    text-transform:uppercase;color:var(--ink-faint);margin:0 0 14px;
+  }
+
+  /* ============================================================
+     (A) 홈
+     ============================================================ */
+  /* 요약 헤더 — 숫자가 권위를 진다. 124를 두 번 말하지 않는다 */
+  .summary{
+    display:grid;grid-template-columns:1.15fr 1fr;gap:0;
+    background:var(--panel);border:1px solid var(--hair);border-radius:14px;
+    box-shadow:var(--shadow);overflow:hidden;margin-bottom:34px;
+  }
+  .summary-left{padding:30px 34px;border-right:1px solid var(--hair);}
+  .summary-left h1{font-size:21px;font-weight:600;letter-spacing:-0.015em;margin:0 0 4px;line-height:1.3;}
+  .summary-left p{color:var(--ink-soft);font-size:14px;margin:0;max-width:42ch;text-wrap:pretty;}
+
+  .figure-row{display:flex;align-items:flex-end;gap:34px;margin:24px 0 6px;}
+  .figure{display:flex;flex-direction:column;}
+  .figure .big{font-size:52px;line-height:0.92;font-weight:400;letter-spacing:-0.02em;color:var(--ink);}
+  .figure.accent .big{color:var(--accent-deep);}
+  .figure .cap{font-size:12.5px;color:var(--ink-faint);margin-top:9px;letter-spacing:0.01em;}
+  .figure .divider-x{width:1px;align-self:stretch;background:var(--hair);}
+
+  .reassure{
+    margin-top:22px;padding-top:18px;border-top:1px dashed var(--hair-strong);
+    font-size:12.5px;color:var(--ink-soft);line-height:1.7;
+  }
+  .reassure b{color:var(--ink);font-weight:600;}
+  .reassure .num{color:var(--ink);}
+
+  /* 출처 분포 — 가라앉은 패널, 색 토큰 범례 겸 */
+  .summary-right{padding:30px 34px;background:var(--paper-sunk);}
+  .summary-right .eyebrow{margin-bottom:18px;}
+  .src-row{display:flex;align-items:center;gap:12px;margin-bottom:13px;}
+  .src-row .sw{width:9px;height:9px;border-radius:2px;flex:none;}
+  .src-row .nm{font-size:13px;width:108px;flex:none;color:var(--ink);}
+  .src-row .track{flex:1;height:7px;background:oklch(0.93 0.005 250);border-radius:99px;overflow:hidden;}
+  .src-row .fill{height:100%;border-radius:99px;}
+  .src-row .ct{font-size:12.5px;color:var(--ink-soft);width:26px;text-align:right;flex:none;}
+
+  /* 모드 4개 — 평평한 4-up 금지. find-overlaps가 주연, 가중 카드 */
+  .modes{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:16px;}
+  .mode{
+    background:var(--panel);border:1px solid var(--hair);border-radius:14px;
+    padding:22px 22px 20px;box-shadow:var(--shadow);
+    transition:border-color .16s, transform .16s;
+    display:flex;flex-direction:column;position:relative;text-align:left;width:100%;
+  }
+  .mode:hover{border-color:var(--hair-strong);transform:translateY(-1px);}
+  .mode .kicker{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:0.06em;margin-bottom:auto;text-transform:uppercase;}
+  .mode h3{font-size:17px;font-weight:600;letter-spacing:-0.01em;margin:30px 0 5px;}
+  .mode p{font-size:13px;color:var(--ink-soft);margin:0;line-height:1.55;text-wrap:pretty;}
+  .mode .live{display:flex;align-items:baseline;gap:8px;margin-top:16px;}
+  .mode .live .n{font-size:15px;color:var(--ink);}
+  .mode .live .lbl{font-size:12px;color:var(--ink-faint);}
+
+  /* 주연 카드 — 더 큰 면적, 강조색 데이터 */
+  .mode.primary{grid-row:span 1;grid-column:1;background:linear-gradient(180deg, var(--panel), oklch(0.985 0.006 200));border-color:oklch(0.86 0.03 205);}
+  .mode.primary h3{font-size:21px;margin-top:34px;}
+  .mode.primary .big-n{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:46px;line-height:1;color:var(--accent-deep);letter-spacing:-0.02em;}
+  .mode.primary .go{
+    margin-top:18px;align-self:flex-start;display:inline-flex;align-items:center;gap:8px;
+    background:var(--accent-deep);color:var(--paper);font-size:13.5px;font-weight:600;
+    border:0;border-radius:8px;padding:10px 18px;transition:background .15s;
+  }
+  .mode.primary .go:hover{background:oklch(0.34 0.08 210);}
+  .mode.primary .go svg{width:14px;height:14px;}
+
+  /* 보조 모드 배치 */
+  .mode[data-mode="task"]{grid-column:2;grid-row:1;}
+  .mode[data-mode="workflow"]{grid-column:3;grid-row:1;}
+  .mode[data-mode="cleanup"]{grid-column:2 / span 2;grid-row:2;flex-direction:row;align-items:center;gap:20px;}
+  .mode[data-mode="cleanup"] .left{flex:1;}
+  .mode[data-mode="cleanup"] h3{margin-top:8px;}
+  .mode[data-mode="cleanup"] .kicker{margin-bottom:8px;}
+  .mode[data-mode="cleanup"] .safe{
+    font-family:var(--mono);font-size:11px;color:var(--ink-soft);
+    background:var(--paper-sunk);border:1px solid var(--hair);border-radius:7px;
+    padding:9px 13px;line-height:1.5;max-width:200px;flex:none;
+  }
+  .mode[data-mode="cleanup"] .safe b{color:var(--ink);font-weight:600;}
+  .mode.primary{grid-column:1;grid-row:1 / span 2;}
+
+  /* ============================================================
+     (B) 겹침 지도
+     ============================================================ */
+  .map-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:6px;flex-wrap:wrap;}
+  .map-head h2{font-size:24px;font-weight:600;letter-spacing:-0.018em;margin:0;}
+  .map-head .sub{color:var(--ink-soft);font-size:14px;margin:8px 0 0;max-width:54ch;text-wrap:pretty;}
+
+  /* 이중 인코딩 범례 — 핵심 차별점 설명 */
+  .legend{
+    display:flex;gap:22px;align-items:center;flex-wrap:wrap;
+    margin:26px 0 8px;padding:14px 18px;
+    background:var(--panel);border:1px solid var(--hair);border-radius:11px;box-shadow:var(--shadow);
+  }
+  .legend .item{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink-soft);}
+  .legend .swatch-filled{width:34px;height:13px;border-radius:3px;background:var(--accent);flex:none;}
+  .legend .swatch-dots{width:34px;height:13px;border-radius:3px;flex:none;
+    background-image:radial-gradient(circle at center, var(--ink-faint) 1.6px, transparent 1.7px);
+    background-size:7px 13px;background-color:oklch(0.95 0.004 250);
+    border:1px solid var(--hair);}
+  .legend .item b{color:var(--ink);font-weight:600;}
+  .legend .spacer{flex:1;}
+  .legend .scale{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:0.04em;}
+
+  /* 막대 차트 — 곳수 내림차순, 한 줄 = 한 묶음 */
+  .chart{background:var(--panel);border:1px solid var(--hair);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-top:14px;}
+  .chart-grid-head{
+    display:grid;grid-template-columns:188px 1fr 60px;align-items:center;
+    padding:13px 24px;border-bottom:1px solid var(--hair);
+    font-family:var(--mono);font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-faint);
+  }
+  .chart-grid-head .r{text-align:right;}
+
+  .bar-row{
+    display:grid;grid-template-columns:188px 1fr 60px;align-items:center;gap:0;
+    padding:0 24px;border-bottom:1px solid var(--hair);
+    min-height:62px;transition:background .14s;cursor:default;position:relative;
+  }
+  .bar-row:last-child{border-bottom:0;}
+  .bar-row:hover{background:var(--paper-sunk);}
+  .bar-row.none{background:oklch(0.975 0.004 95);}
+
+  .bar-label{display:flex;flex-direction:column;gap:4px;padding-right:18px;}
+  .bar-label .lab{font-size:14.5px;font-weight:500;color:var(--ink);letter-spacing:-0.005em;}
+  .bar-label .srcs{display:flex;gap:5px;align-items:center;}
+  .bar-label .srcchip{
+    font-family:var(--mono);font-size:10px;color:var(--ink-soft);
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .bar-label .srcchip i{width:7px;height:7px;border-radius:2px;display:inline-block;}
+
+  .bar-track{position:relative;height:30px;display:flex;align-items:center;}
+  /* 채워진 칸 = 진짜 같은 일 / 점 = 역할이 다른 자리 */
+  .seg{height:26px;border-radius:5px;margin-right:4px;position:relative;}
+  .seg.filled{background:var(--accent);}
+  .seg.dotted{
+    background-color:var(--accent-wash);
+    background-image:radial-gradient(circle at center, var(--accent) 2px, transparent 2.2px);
+    background-size:13px 26px;background-position:center;
+    border:1px solid oklch(0.82 0.04 200);
+  }
+  .seg.none-seg{background:oklch(0.90 0.006 250);}
+
+  .bar-count{display:flex;align-items:baseline;justify-content:flex-end;gap:3px;}
+  .bar-count .n{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:23px;color:var(--ink);letter-spacing:-0.01em;}
+  .bar-count.hi .n{color:var(--accent-deep);}
+  .bar-count .u{font-size:11px;color:var(--ink-faint);}
+
+  /* 펼침 상세 — 실제 스킬 이름은 여기서만(영문 허용 예외) */
+  .bar-detail{
+    grid-column:1 / -1;display:none;padding:4px 0 18px;
+  }
+  .bar-row.open{min-height:auto;padding-bottom:0;}
+  .bar-row.open .bar-detail{display:block;}
+  .bar-row.open{background:var(--paper-sunk);}
+  .detail-inner{
+    margin:6px 0 0;padding:16px 18px;background:var(--panel);
+    border:1px solid var(--hair);border-radius:10px;
+  }
+  .detail-inner .dh{font-size:12px;color:var(--ink-faint);margin-bottom:11px;font-family:var(--mono);letter-spacing:0.03em;}
+  .skill-line{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--hair);}
+  .skill-line:first-of-type{border-top:0;}
+  .skill-line i{width:8px;height:8px;border-radius:2px;flex:none;}
+  .skill-line .id{font-family:var(--mono);font-size:12.5px;color:var(--ink);}
+  .skill-line .role{margin-left:auto;font-size:11.5px;color:var(--ink-faint);}
+
+  .expand-hint{font-family:var(--mono);font-size:10px;color:var(--ink-faint);position:absolute;right:24px;top:10px;opacity:0;transition:opacity .14s;letter-spacing:0.05em;}
+  .bar-row:hover .expand-hint{opacity:1;}
+  .bar-row.open .expand-hint{opacity:0;}
+  .bar-row[role="button"]{cursor:pointer;}
+
+  /* 정리 안내 footer (지도 뷰 하단) */
+  .map-foot{
+    margin-top:20px;display:flex;gap:14px;align-items:center;
+    font-size:13px;color:var(--ink-soft);background:var(--accent-wash);
+    border:1px solid oklch(0.84 0.035 200);border-radius:11px;padding:15px 20px;text-wrap:pretty;
+  }
+  .map-foot .ic{width:22px;height:22px;flex:none;color:var(--accent-deep);}
+  .map-foot b{color:var(--ink);font-weight:600;}
+
+  /* ---------- 반응형 ---------- */
+  @media (max-width:880px){
+    .summary{grid-template-columns:1fr;}
+    .summary-left{border-right:0;border-bottom:1px solid var(--hair);}
+    .modes{grid-template-columns:1fr 1fr;}
+    .mode.primary{grid-column:1 / -1;grid-row:auto;}
+    .mode[data-mode="task"],.mode[data-mode="workflow"]{grid-column:auto;grid-row:auto;}
+    .mode[data-mode="cleanup"]{grid-column:1 / -1;grid-row:auto;}
+  }
+  @media (max-width:620px){
+    .wrap,.topbar-inner{padding-left:18px;padding-right:18px;}
+    .modes{grid-template-columns:1fr;}
+    .mode[data-mode="cleanup"]{flex-direction:column;align-items:flex-start;}
+    .mode[data-mode="cleanup"] .safe{max-width:none;}
+    .figure-row{gap:22px;flex-wrap:wrap;}
+    .figure .big{font-size:42px;}
+    .chart-grid-head,.bar-row{grid-template-columns:118px 1fr 44px;padding-left:16px;padding-right:16px;}
+    .bar-label .lab{font-size:13px;}
+    .bar-count .n{font-size:19px;}
+    .topnav{margin-left:0;}
+    .readonly-pill{display:none;}
+    .summary-left h1{font-size:18px;}
+  }
+  @media (max-width:440px){
+    .chart-grid-head,.bar-row{grid-template-columns:1fr 70px;}
+    .bar-track{grid-column:1 / -1;grid-row:2;margin-top:8px;}
+    .bar-row{min-height:auto;padding-top:14px;padding-bottom:14px;}
+    .bar-label{grid-row:1;grid-column:1;}
+    .bar-count{grid-row:1;grid-column:2;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="glyph" aria-hidden="true"></span>
+      <span>Skills Manager <small>스킬 정리</small></span>
+    </div>
+    <nav class="topnav" aria-label="화면 전환">
+      <button data-go="home" aria-current="true">홈</button>
+      <button data-go="map">겹침 지도</button>
+    </nav>
+    <span class="readonly-pill" title="이 도구는 스킬을 지우거나 바꾸지 않고, 보여주기만 합니다.">
+      <span class="dot" aria-hidden="true"></span>읽기 전용
+    </span>
+  </div>
+</header>
+
+<!-- ============================ (A) 홈 ============================ -->
+<main>
+<section data-view="home" class="active">
+  <div class="wrap">
+
+    <!-- 요약 -->
+    <div class="summary">
+      <div class="summary-left">
+        <p class="eyebrow">현재 설치 상태</p>
+        <h1>설치된 스킬을 훑어, 같은 일을 하는 자리가<br>어디에 겹치는지 지도로 보여드려요.</h1>
+        <p>지우거나 바꾸지 않아요. 어디가 겹치는지 먼저 보고, 정리는 직접 결정합니다.</p>
+
+        <div class="figure-row">
+          <div class="figure">
+            <span class="big num">124</span>
+            <span class="cap">설치된 스킬</span>
+          </div>
+          <div class="divider-x" aria-hidden="true"></div>
+          <div class="figure accent">
+            <span class="big num">8</span>
+            <span class="cap">같은 일이 겹치는 묶음</span>
+          </div>
+          <div class="divider-x" aria-hidden="true"></div>
+          <div class="figure">
+            <span class="big num">7</span>
+            <span class="cap">스킬을 가져온 출처</span>
+          </div>
+        </div>
+
+        <p class="reassure">
+          숫자가 커 보이지만, 실제로는 <b>약 100개</b>에 가까워요 — 같은 스킬이 여러 경로로
+          중복 등록된 <span class="num">486</span>건을 하나로 묶어 정리했습니다.
+        </p>
+      </div>
+
+      <div class="summary-right">
+        <p class="eyebrow">출처별 스킬 수</p>
+        <!-- 출처 = 색 토큰 (이 색이 지도 전체에서 같은 의미로 쓰임) -->
+        <div class="src-row">
+          <span class="sw" style="background:var(--src-gstack)"></span>
+          <span class="nm">gstack</span>
+          <span class="track"><span class="fill" style="width:100%;background:var(--src-gstack)"></span></span>
+          <span class="ct num">53</span>
+        </div>
+        <div class="src-row">
+          <span class="sw" style="background:var(--src-agents)"></span>
+          <span class="nm">.agents</span>
+          <span class="track"><span class="fill" style="width:51%;background:var(--src-agents)"></span></span>
+          <span class="ct num">27</span>
+        </div>
+        <div class="src-row">
+          <span class="sw" style="background:var(--src-agentskills)"></span>
+          <span class="nm">agent-skills</span>
+          <span class="track"><span class="fill" style="width:43%;background:var(--src-agentskills)"></span></span>
+          <span class="ct num">23</span>
+        </div>
+        <div class="src-row">
+          <span class="sw" style="background:var(--src-superpowers)"></span>
+          <span class="nm">superpowers</span>
+          <span class="track"><span class="fill" style="width:26%;background:var(--src-superpowers)"></span></span>
+          <span class="ct num">14</span>
+        </div>
+        <div class="src-row">
+          <span class="sw" style="background:var(--src-codex)"></span>
+          <span class="nm">codex</span>
+          <span class="track"><span class="fill" style="width:6%;background:var(--src-codex)"></span></span>
+          <span class="ct num">3</span>
+        </div>
+        <div class="src-row">
+          <span class="sw" style="background:var(--src-user)"></span>
+          <span class="nm">user</span>
+          <span class="track"><span class="fill" style="width:6%;background:var(--src-user)"></span></span>
+          <span class="ct num">3</span>
+        </div>
+        <div class="src-row">
+          <span class="sw" style="background:var(--src-harness)"></span>
+          <span class="nm">harness</span>
+          <span class="track"><span class="fill" style="width:2%;background:var(--src-harness)"></span></span>
+          <span class="ct num">1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모드 4개 (가중 카드) -->
+    <p class="eyebrow">무엇을 하시겠어요</p>
+    <div class="modes">
+
+      <button class="mode primary" data-go="map" aria-label="겹치는 스킬 찾기 — 겹침 지도 열기">
+        <span class="kicker">주요 작업</span>
+        <h3>겹치는 스킬 찾기</h3>
+        <p>같은 일을 하는 스킬이 어느 자리에서 겹치는지 막대 지도로 한눈에 봅니다.</p>
+        <div class="live">
+          <span class="big-n">8</span>
+          <span class="lbl">묶음에서 겹침이 보였어요</span>
+        </div>
+        <span class="go">
+          지도 열기
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </button>
+
+      <button class="mode" data-mode="task" aria-label="이 작업 뭐 쓰지">
+        <span class="kicker">추천</span>
+        <h3>이 작업 뭐 쓰지</h3>
+        <p>하려는 일을 적으면, 겹치는 후보 중 하나를 골라 추천해요.</p>
+        <div class="live"><span class="n num">9</span><span class="lbl">작업 종류 정리됨</span></div>
+      </button>
+
+      <button class="mode" data-mode="workflow" aria-label="내 워크플로우">
+        <span class="kicker">저장</span>
+        <h3>내 워크플로우</h3>
+        <p>자주 쓰는 순서를 묶어 저장하고, 한 번에 불러옵니다.</p>
+        <div class="live"><span class="n num">0</span><span class="lbl">저장된 흐름 — 새로 만들기</span></div>
+      </button>
+
+      <button class="mode" data-mode="cleanup" aria-label="스킬 정리">
+        <div class="left">
+          <span class="kicker">정리</span>
+          <h3>스킬 정리</h3>
+          <p>안 쓰는 스킬을 골라냅니다. 정리는 따로 마련된 자리에서만 일어나요.</p>
+        </div>
+        <div class="safe">
+          치우기는 <b>되돌릴 수 있는 보관함</b>으로 옮기는 것 — 영구 삭제가 아니에요.
+        </div>
+      </button>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================ (B) 겹침 지도 ============================ -->
+<section data-view="map">
+  <div class="wrap">
+
+    <div class="map-head">
+      <div>
+        <p class="eyebrow">겹침 지도</p>
+        <h2>같은 일이 겹치는 자리</h2>
+        <p class="sub">묶음마다 그 일을 할 수 있는 스킬이 몇 곳에 있는지, 곳수 많은 순으로 늘어놨어요.</p>
+      </div>
+    </div>
+
+    <!-- 이중 인코딩 범례 (핵심 차별점) -->
+    <div class="legend" role="note" aria-label="막대 읽는 법">
+      <span class="item"><span class="swatch-filled" aria-hidden="true"></span><b>채워진 칸</b>&nbsp;= 사실상 같은 일</span>
+      <span class="item"><span class="swatch-dots" aria-hidden="true"></span><b>점 찍힌 칸</b>&nbsp;= 비슷하지만 역할이 조금 다름</span>
+      <span class="spacer"></span>
+      <span class="scale">칸 하나 = 한 곳</span>
+    </div>
+
+    <!-- 막대 차트 -->
+    <div class="chart" id="chart"></div>
+
+    <div class="map-foot">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8v5m0 3h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>겹친다고 꼭 지울 필요는 없어요. 어디에 무엇이 있는지 <b>먼저 보고</b>, 정리 기준은 직접 정합니다. 정리는 <b>되돌릴 수 있는 보관함</b>으로만 옮겨요.</span>
+    </div>
+
+  </div>
+</section>
+</main>
+
+<script>
+/* ---- 실제 scan.json 데이터 (곳수 내림차순) ---- */
+const SRC_COLOR = {
+  "gstack":      "var(--src-gstack)",
+  ".agents":     "var(--src-agents)",
+  "agent-skills":"var(--src-agentskills)",
+  "superpowers": "var(--src-superpowers)",
+  "codex":       "var(--src-codex)",
+  "user":        "var(--src-user)",
+  "harness":     "var(--src-harness)"
+};
+
+/* duplicateLevel high = 채워진(진짜 같은 일), none = 회색.
+   "계획 세우기"는 실제로 5개 중 일부가 역할이 다른 보조 스킬이라 점 칸으로 표현 */
+const GROUPS = [
+  { label:"아이디어 / 브레인스토밍", count:6, sources:[".agents","gstack","agent-skills","superpowers"],
+    seg:["filled","filled","filled","filled","dotted","dotted"],
+    skills:[
+      {id:".agents:grill-me", src:".agents", role:"같은 일"},
+      {id:"gstack:office-hours", src:"gstack", role:"같은 일"},
+      {id:"agent-skills:idea-refine", src:"agent-skills", role:"같은 일"},
+      {id:"superpowers:brainstorming", src:"superpowers", role:"같은 일"},
+      {id:".agents:grill-with-docs", src:".agents", role:"문서와 함께"},
+      {id:"agent-skills:interview-me", src:"agent-skills", role:"인터뷰형"}
+    ] },
+  { label:"계획 세우기", count:5, sources:["agent-skills","superpowers"],
+    seg:["filled","filled","dotted","dotted","dotted"],
+    skills:[
+      {id:"agent-skills:planning-and-task-breakdown", src:"agent-skills", role:"같은 일"},
+      {id:"superpowers:writing-plans", src:"superpowers", role:"같은 일"},
+      {id:"superpowers:executing-plans", src:"superpowers", role:"실행 단계"},
+      {id:"superpowers:subagent-driven-development", src:"superpowers", role:"실행 방식"},
+      {id:"superpowers:using-git-worktrees", src:"superpowers", role:"작업공간 분리"}
+    ] },
+  { label:"코드 리뷰", count:4, sources:["gstack","agent-skills","superpowers"],
+    seg:["filled","filled","dotted","dotted"],
+    skills:[
+      {id:"gstack:review", src:"gstack", role:"같은 일"},
+      {id:"agent-skills:code-review-and-quality", src:"agent-skills", role:"같은 일"},
+      {id:"superpowers:requesting-code-review", src:"superpowers", role:"요청 쪽"},
+      {id:"superpowers:receiving-code-review", src:"superpowers", role:"수용 쪽"}
+    ] },
+  { label:"디버깅", count:4, sources:[".agents","gstack","agent-skills","superpowers"],
+    seg:["filled","filled","filled","filled"],
+    skills:[
+      {id:".agents:diagnose", src:".agents", role:"같은 일"},
+      {id:"gstack:investigate", src:"gstack", role:"같은 일"},
+      {id:"agent-skills:debugging-and-error-recovery", src:"agent-skills", role:"같은 일"},
+      {id:"superpowers:systematic-debugging", src:"superpowers", role:"같은 일"}
+    ] },
+  { label:"테스트 먼저 짜기 (TDD)", count:3, sources:[".agents","agent-skills","superpowers"],
+    seg:["filled","filled","filled"],
+    skills:[
+      {id:".agents:tdd", src:".agents", role:"같은 일"},
+      {id:"agent-skills:test-driven-development", src:"agent-skills", role:"같은 일"},
+      {id:"superpowers:test-driven-development", src:"superpowers", role:"같은 일"}
+    ] },
+  { label:"배포 / 출시", count:3, sources:["gstack","agent-skills"],
+    seg:["filled","filled","dotted"],
+    skills:[
+      {id:"gstack:ship", src:"gstack", role:"같은 일"},
+      {id:"agent-skills:shipping-and-launch", src:"agent-skills", role:"같은 일"},
+      {id:"gstack:land-and-deploy", src:"gstack", role:"배포 포함"}
+    ] },
+  { label:"스펙 작성", count:2, sources:["gstack","agent-skills"],
+    seg:["filled","filled"],
+    skills:[
+      {id:"gstack:spec", src:"gstack", role:"같은 일"},
+      {id:"agent-skills:spec-driven-development", src:"agent-skills", role:"같은 일"}
+    ] },
+  { label:"보안 점검", count:2, sources:["gstack","agent-skills"],
+    seg:["filled","filled"],
+    skills:[
+      {id:"gstack:cso", src:"gstack", role:"같은 일"},
+      {id:"agent-skills:security-and-hardening", src:"agent-skills", role:"같은 일"}
+    ] },
+  { label:"코드 단순화", count:1, sources:["agent-skills"], none:true,
+    seg:["none-seg"],
+    skills:[
+      {id:"agent-skills:code-simplification", src:"agent-skills", role:"단독 — 겹침 없음"}
+    ] }
+];
+
+const MAXCELL = 6; // 가장 큰 곳수 = 막대 폭 기준
+
+function srcChip(src){
+  return `<span class="srcchip"><i style="background:${SRC_COLOR[src]||'var(--src-user)'}"></i>${src}</span>`;
+}
+
+function renderChart(){
+  const el = document.getElementById('chart');
+  let html = `<div class="chart-grid-head"><span>겹치는 일</span><span>겹친 곳 →</span><span class="r">곳수</span></div>`;
+  GROUPS.forEach((g, gi) => {
+    const cellW = `calc((100% - ${(MAXCELL-1)*4}px) / ${MAXCELL})`;
+    const segs = g.seg.map(s => `<span class="seg ${s}" style="width:${cellW}"></span>`).join('');
+    const chips = g.sources.map(srcChip).join('');
+    const detail = g.skills.map(sk => `
+      <div class="skill-line">
+        <i style="background:${SRC_COLOR[sk.src]||'var(--src-user)'}"></i>
+        <span class="id">${sk.id}</span>
+        <span class="role">${sk.role}</span>
+      </div>`).join('');
+    html += `
+      <div class="bar-row ${g.none?'none':''}" role="button" tabindex="0" data-i="${gi}"
+           aria-expanded="false" aria-label="${g.label}, ${g.count}곳. 눌러서 자세히 보기">
+        <div class="bar-label">
+          <span class="lab">${g.label}</span>
+          <span class="srcs">${chips}</span>
+        </div>
+        <div class="bar-track">${segs}</div>
+        <div class="bar-count ${g.none?'':'hi'}"><span class="n">${g.count}</span><span class="u">곳</span></div>
+        <span class="expand-hint">자세히 ▾</span>
+        <div class="bar-detail">
+          <div class="detail-inner">
+            <div class="dh">이 묶음에 든 스킬 — 실제 이름</div>
+            ${detail}
+          </div>
+        </div>
+      </div>`;
+  });
+  el.innerHTML = html;
+
+  el.querySelectorAll('.bar-row').forEach(row => {
+    const toggle = () => {
+      const open = row.classList.toggle('open');
+      row.setAttribute('aria-expanded', open ? 'true':'false');
+    };
+    row.addEventListener('click', toggle);
+    row.addEventListener('keydown', e => {
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); }
+    });
+  });
+}
+renderChart();
+
+/* ---- 뷰 전환 ---- */
+const views = document.querySelectorAll('section[data-view]');
+const navBtns = document.querySelectorAll('.topnav button');
+function show(view){
+  views.forEach(s => s.classList.toggle('active', s.dataset.view === view));
+  navBtns.forEach(b => b.setAttribute('aria-current', b.dataset.go === view ? 'true':'false'));
+  window.scrollTo({top:0, behavior:'instant' in window ? 'instant':'auto'});
+  try{ localStorage.setItem('sm-view', view); }catch(e){}
+}
+document.querySelectorAll('[data-go]').forEach(el => {
+  el.addEventListener('click', () => show(el.dataset.go));
+});
+/* 모드 카드 중 지도로 안 가는 것들은 데모상 클릭만 받음 (읽기 전용 데모) */
+try{ const saved = localStorage.getItem('sm-view'); if(saved) show(saved); }catch(e){}
+</script>
+</body>
+</html>
